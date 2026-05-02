@@ -9,7 +9,22 @@
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/style.css">
 </head>
-<body>
+<?php $hasMobileBottomNav = isLoggedIn() && !hasRole('hrd') && !hasRole('admin'); ?>
+<body class="<?= $hasMobileBottomNav ? 'has-mobile-bottom-nav' : '' ?>">
+    <?php
+    $currentRoute = trim((string) ($_GET['route'] ?? 'dashboard'), '/');
+    $currentRoute = $currentRoute === '' ? 'dashboard' : $currentRoute;
+    $routeSegments = explode('/', strtolower($currentRoute));
+    $currentSection = $routeSegments[0] ?? 'dashboard';
+    $currentPage = $page ?? '';
+
+    $isStaff = isLoggedIn() && (hasRole('hrd') || hasRole('admin'));
+    $isDashboardActive = in_array($currentPage, ['dashboard', 'dashboard-hrd'], true) || $currentSection === 'dashboard';
+    $isJobsActive = in_array($currentPage, ['jobs', 'job-detail', 'apply'], true) || $currentSection === 'jobs';
+    $isApplicationsActive = in_array($currentPage, ['my-applications', 'application-detail', 'hrd-applications'], true) || $currentSection === 'applications';
+    $isChatActive = in_array($currentPage, ['chat', 'chat-room'], true) || $currentSection === 'chat';
+    $isProfileActive = in_array($currentPage, ['profile', 'profile-edit', 'change-password'], true) || $currentSection === 'profile';
+    ?>
     <nav class="navbar">
         <div class="container nav-wrap">
             <a href="<?= BASE_URL ?>" class="brand">DST Recruitment</a>
@@ -18,19 +33,19 @@
 
             <?php if (isLoggedIn()): ?>
             <ul class="nav-menu" id="nav-menu">
-                <li><a href="<?= BASE_URL ?>dashboard">Dashboard</a></li>
-                <li><a href="<?= BASE_URL ?>jobs">Lowongan</a></li>
+                <li><a href="<?= BASE_URL ?>dashboard" class="<?= $isDashboardActive ? 'active' : '' ?>"><?= $isStaff ? 'Dashboard' : 'Home' ?></a></li>
+                <li><a href="<?= BASE_URL ?>jobs" class="<?= $isJobsActive ? 'active' : '' ?>">Lowongan</a></li>
                 <?php if (hasRole('hrd') || hasRole('admin')): ?>
-                <li><a href="<?= BASE_URL ?>jobs/manage">Kelola Lowongan</a></li>
-                <li><a href="<?= BASE_URL ?>applications/hrd">Pelamar</a></li>
+                <li><a href="<?= BASE_URL ?>jobs/manage" class="<?= in_array($currentPage, ['manage-jobs', 'job-form'], true) ? 'active' : '' ?>">Kelola Lowongan</a></li>
+                <li><a href="<?= BASE_URL ?>applications/hrd" class="<?= $isApplicationsActive ? 'active' : '' ?>">Pelamar</a></li>
                 <?php else: ?>
-                <li><a href="<?= BASE_URL ?>applications">Lamaran Saya</a></li>
+                <li><a href="<?= BASE_URL ?>applications" class="<?= $isApplicationsActive ? 'active' : '' ?>">Lamaran Saya</a></li>
                 <?php endif; ?>
-                <li><a href="<?= BASE_URL ?>chat">Pesan</a></li>
+                <li><a href="<?= BASE_URL ?>chat" class="<?= $isChatActive ? 'active' : '' ?>">Pesan</a></li>
                 <li class="dropdown">
-                    <a href="#" class="dropbtn"><?= h($_SESSION['full_name'] ?? 'Akun') ?></a>
+                    <a href="#" class="dropbtn <?= $isProfileActive ? 'active' : '' ?>"><?= h($_SESSION['full_name'] ?? 'Akun') ?></a>
                     <div class="dropdown-content">
-                        <a href="<?= BASE_URL ?>profile">Profil</a>
+                        <a href="<?= BASE_URL ?>profile" class="<?= $isProfileActive ? 'active' : '' ?>">Profil</a>
                         <a href="<?= BASE_URL ?>auth/logout">Logout</a>
                     </div>
                 </li>
