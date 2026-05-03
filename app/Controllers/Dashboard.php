@@ -120,7 +120,7 @@ class Dashboard extends Controller {
         
         // Lamaran terbaru
         $recent_applications = db()->select(
-            "SELECT a.*, u.full_name as candidate_name, u.email as candidate_email, u.skills, u.education,
+            "SELECT a.*, u.full_name as candidate_name, u.email as candidate_email, u.skills, u.education, u.avatar as candidate_avatar,
                     j.title as job_title, j.location 
              FROM applications a
              JOIN users u ON a.user_id = u.id

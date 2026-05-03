@@ -161,6 +161,31 @@ function uploadPath($folder, $filename) {
     return UPLOAD_ROOT . trim($folder, '/') . DIRECTORY_SEPARATOR . basename($filename);
 }
 
+function avatarUrl($avatar = null) {
+    $filename = basename((string) $avatar);
+
+    if ($filename === '') {
+        return null;
+    }
+
+    $path = uploadPath('avatars', $filename);
+    if (!is_file($path)) {
+        return null;
+    }
+
+    return BASE_URL . 'uploads/avatars/' . rawurlencode($filename);
+}
+
+function avatarInitial($fullName) {
+    $name = trim((string) $fullName);
+    if ($name === '') {
+        return '?';
+    }
+
+    $initial = function_exists('mb_substr') ? mb_substr($name, 0, 1, 'UTF-8') : substr($name, 0, 1);
+    return function_exists('mb_strtoupper') ? mb_strtoupper($initial, 'UTF-8') : strtoupper($initial);
+}
+
 function hashPassword($password) {
     return password_hash($password, PASSWORD_DEFAULT);
 }

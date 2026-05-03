@@ -27,7 +27,7 @@ class Chat extends Controller {
         $conversations = db()->select(
             "SELECT DISTINCT 
                     CASE WHEN m.from_user_id = ? THEN m.to_user_id ELSE m.from_user_id END as partner_id,
-                    u.full_name as partner_name, u.role,
+                    u.full_name as partner_name, u.role, u.avatar as partner_avatar,
                     (SELECT content FROM messages WHERE 
                         (from_user_id = ? AND to_user_id = u.id) OR 
                         (from_user_id = u.id AND to_user_id = ?) 
@@ -61,7 +61,7 @@ class Chat extends Controller {
     private function hrdIndex($hrd_id) {
         $conversations = db()->select(
             "SELECT DISTINCT 
-                    u.id as partner_id, u.full_name as partner_name, u.role,
+                    u.id as partner_id, u.full_name as partner_name, u.role, u.avatar as partner_avatar,
                     (SELECT content FROM messages WHERE 
                         (from_user_id = ? AND to_user_id = u.id) OR 
                         (from_user_id = u.id AND to_user_id = ?) 
@@ -110,7 +110,7 @@ class Chat extends Controller {
             redirect('chat');
         }
         
-        $partner = db()->row("SELECT id, full_name, role FROM users WHERE id = ?", [$partner_id]);
+        $partner = db()->row("SELECT id, full_name, role, avatar FROM users WHERE id = ?", [$partner_id]);
         
         if (!$partner) {
             redirect('chat');

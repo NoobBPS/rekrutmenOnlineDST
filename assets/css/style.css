@@ -590,6 +590,49 @@ small {
     flex-wrap: wrap;
 }
 
+.candidate-identity {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.candidate-text small {
+    color: var(--muted);
+}
+
+.candidate-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.candidate-avatar-lg {
+    width: 56px;
+    height: 56px;
+    font-size: 1.3rem;
+}
+
+.candidate-avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.candidate-profile-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
 .inline-form {
     display: inline-block;
     margin: 0;
@@ -748,6 +791,13 @@ small {
     place-items: center;
     font-family: 'Space Grotesk', sans-serif;
     font-weight: 700;
+    overflow: hidden;
+}
+
+.conv-avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .conv-content {
@@ -796,6 +846,26 @@ small {
     display: flex;
     align-items: center;
     gap: 12px;
+}
+
+.chat-user-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.chat-user-avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .chat-user {
@@ -871,6 +941,24 @@ small {
     display: grid;
     grid-template-columns: 1fr auto;
     gap: 10px;
+    align-items: end;
+}
+
+.chat-input-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.chat-input textarea {
+    min-height: 46px;
+    max-height: 160px;
+    resize: none;
+    line-height: 1.45;
+}
+
+.chat-input-hint {
+    font-size: 0.76rem;
 }
 
 .profile-container,
@@ -911,6 +999,13 @@ small {
     font-family: 'Space Grotesk', sans-serif;
     font-size: 1.8rem;
     font-weight: 700;
+    overflow: hidden;
+}
+
+.profile-avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .profile-email {
@@ -932,6 +1027,17 @@ small {
     border-radius: 50%;
     object-fit: cover;
     border: 1px solid var(--border);
+}
+
+.profile-photo-form {
+    display: grid;
+    gap: 10px;
+}
+
+.profile-photo-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 .mobile-bottom-nav {

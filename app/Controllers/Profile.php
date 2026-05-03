@@ -108,6 +108,45 @@ class Profile extends Controller {
         setFlash('success', 'Profil berhasil diperbarui');
         redirect('profile');
     }
+
+    /**
+     * Upload foto profil cepat
+     */
+    public function updateAvatar() {
+        if (!isLoggedIn() || $_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('auth/login');
+        }
+
+        requireValidCsrf();
+
+        if (empty($_FILES['avatar']['name'])) {
+            setFlash('warning', 'Pilih file foto terlebih dahulu');
+            redirect('profile');
+        }
+
+        $upload = uploadFile($_FILES['avatar'], 'avatars');
+        if (!$upload['success']) {
+            setFlash('error', 'Foto profil gagal diupload: ' . $upload['message']);
+            redirect('profile');
+        }
+
+        $current = db()->row("SELECT avatar FROM users WHERE id = ?", [$_SESSION['user_id']]);
+
+        db()->execute(
+            "UPDATE users SET avatar = ? WHERE id = ?",
+            [$upload['filename'], $_SESSION['user_id']]
+        );
+
+        if (!empty($current['avatar']) && $current['avatar'] !== $upload['filename']) {
+            $oldAvatarPath = uploadPath('avatars', $current['avatar']);
+            if (is_file($oldAvatarPath)) {
+                @unlink($oldAvatarPath);
+            }
+        }
+
+        setFlash('success', 'Foto profil berhasil diperbarui');
+        redirect('profile');
+    }
     
     /**
      * Ganti Password

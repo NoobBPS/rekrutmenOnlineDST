@@ -7,8 +7,20 @@
     <div class="detail-grid">
         <div class="detail-card">
             <h3>Informasi Pelamar</h3>
-            <p><strong><?= h($candidate['full_name']) ?></strong></p>
-            <p><?= h($candidate['email']) ?></p>
+            <?php $candidateAvatarUrl = avatarUrl($candidate['avatar'] ?? null); ?>
+            <div class="candidate-profile-head">
+                <div class="candidate-avatar candidate-avatar-lg">
+                    <?php if ($candidateAvatarUrl): ?>
+                    <img src="<?= h($candidateAvatarUrl) ?>" class="candidate-avatar-image" alt="Foto profil <?= h($candidate['full_name']) ?>">
+                    <?php else: ?>
+                    <?= h(avatarInitial($candidate['full_name'] ?? '')) ?>
+                    <?php endif; ?>
+                </div>
+                <div>
+                    <p><strong><?= h($candidate['full_name']) ?></strong></p>
+                    <p><?= h($candidate['email']) ?></p>
+                </div>
+            </div>
             <p><?= h($candidate['phone'] ?? '-') ?></p>
             <p>Pendidikan: <?= h($candidate['education'] ?? '-') ?></p>
             <p>Pengalaman: <?= (int) ($candidate['experience_years'] ?? 0) ?> tahun</p>

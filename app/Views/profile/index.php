@@ -1,3 +1,26 @@
+<?php
+// Ensure $user is defined. Normally the controller passes it, but some code paths may render this view
+// without providing $user (causing undefined variable notices). If it's missing and the user is
+// logged in, fetch from the database as a safe fallback.
+if (!isset($user) || $user === null) {
+    $user = [];
+    if (function_exists('isLoggedIn') && isLoggedIn()) {
+        $uid = $_SESSION['user_id'] ?? null;
+        if ($uid) {
+            try {
+                $fetched = db()->row("SELECT * FROM users WHERE id = ?", [$uid]);
+                if (!empty($fetched) && is_array($fetched)) {
+                    $user = $fetched;
+                }
+            } catch (Throwable $e) {
+                // If DB isn't available here, silently continue with empty user to avoid breaking the view.
+            }
+        }
+    }
+}
+
+$profileAvatarUrl = avatarUrl($user['avatar'] ?? null);
+?>
 <div class="profile-container">
     <div class="profile-header">
         <h1>Profil Saya</h1>
@@ -7,7 +30,11 @@
     <div class="profile-grid">
         <div class="profile-card">
             <div class="profile-avatar">
-                <?= strtoupper(substr($user['full_name'], 0, 1)) ?>
+                <?php if ($profileAvatarUrl): ?>
+                <img src="<?= h($profileAvatarUrl) ?>" class="profile-avatar-image" alt="Foto profil <?= h($user['full_name']) ?>">
+                <?php else: ?>
+                <?= h(avatarInitial($user['full_name'] ?? '')) ?>
+                <?php endif; ?>
             </div>
             <h2><?= h($user['full_name']) ?></h2>
             <p class="profile-email"><?= h($user['email']) ?></p>
@@ -27,6 +54,19 @@
                 <p><?= (int) ($user['experience_years'] ?? 0) ?> tahun</p>
             </div>
         </div>
+    </div>
+
+    <div class="profile-section profile-photo-section">
+        <h3>Foto Profil</h3>
+        <form action="<?= BASE_URL ?>profile/updateAvatar" method="POST" enctype="multipart/form-data" class="profile-photo-form">
+            <?= csrfField() ?>
+            <input type="file" name="avatar" accept="image/png,image/jpeg,image/webp" required>
+            <div class="profile-photo-actions">
+                <button type="submit" class="btn btn-primary">Upload Foto</button>
+                <a href="<?= BASE_URL ?>profile/edit" class="btn btn-secondary">Edit Profil Lengkap</a>
+            </div>
+            <small>Maksimal 2MB. Format: JPG, PNG, WEBP.</small>
+        </form>
     </div>
 
     <?php if (!empty($user['skills'])): ?>

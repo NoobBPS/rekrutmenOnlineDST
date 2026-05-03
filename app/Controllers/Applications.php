@@ -179,7 +179,7 @@ class Applications extends Controller {
         $applications = db()->select(
             "SELECT a.*, u.full_name as candidate_name, u.email as candidate_email, 
                     u.phone, u.education as candidate_education, u.skills as candidate_skills,
-                    u.experience_years as candidate_experience_years, u.bio as candidate_bio, u.cv_file,
+                    u.experience_years as candidate_experience_years, u.bio as candidate_bio, u.avatar as candidate_avatar, u.cv_file,
                     j.title as job_title, j.location, j.department as job_department, j.skills as job_skills,
                     j.requirements as job_requirements, j.description as job_description
              FROM applications a

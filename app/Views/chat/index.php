@@ -13,9 +13,14 @@
     <?php else: ?>
     <div class="conversations-list">
         <?php foreach ($conversations as $conv): ?>
+        <?php $partnerAvatarUrl = avatarUrl($conv['partner_avatar'] ?? null); ?>
         <a href="<?= BASE_URL ?>chat/room/<?= (int) $conv['partner_id'] ?>" class="conversation-item">
             <div class="conv-avatar">
-                <?= strtoupper(substr($conv['partner_name'], 0, 1)) ?>
+                <?php if ($partnerAvatarUrl): ?>
+                <img src="<?= h($partnerAvatarUrl) ?>" class="conv-avatar-image" alt="Foto profil <?= h($conv['partner_name']) ?>">
+                <?php else: ?>
+                <?= h(avatarInitial($conv['partner_name'] ?? '')) ?>
+                <?php endif; ?>
             </div>
             <div class="conv-content">
                 <div class="conv-header">

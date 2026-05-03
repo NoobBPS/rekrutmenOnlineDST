@@ -64,8 +64,20 @@
                 <?php foreach ($recent_applications as $app): ?>
                 <tr>
                     <td>
-                        <strong><?= h($app['candidate_name']) ?></strong><br>
-                        <small><?= h($app['candidate_email']) ?></small>
+                        <?php $candidateAvatarUrl = avatarUrl($app['candidate_avatar'] ?? null); ?>
+                        <div class="candidate-identity">
+                            <div class="candidate-avatar">
+                                <?php if ($candidateAvatarUrl): ?>
+                                <img src="<?= h($candidateAvatarUrl) ?>" class="candidate-avatar-image" alt="Foto profil <?= h($app['candidate_name']) ?>">
+                                <?php else: ?>
+                                <?= h(avatarInitial($app['candidate_name'] ?? '')) ?>
+                                <?php endif; ?>
+                            </div>
+                            <div class="candidate-text">
+                                <strong><?= h($app['candidate_name']) ?></strong><br>
+                                <small><?= h($app['candidate_email']) ?></small>
+                            </div>
+                        </div>
                     </td>
                     <td><?= h($app['job_title']) ?></td>
                     <td><?= statusLabel($app['status']) ?></td>

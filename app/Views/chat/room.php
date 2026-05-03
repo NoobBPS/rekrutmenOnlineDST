@@ -1,6 +1,14 @@
+<?php $partnerAvatarUrl = avatarUrl($partner['avatar'] ?? null); ?>
 <div class="chat-room">
     <div class="chat-header">
         <a href="<?= BASE_URL ?>chat" class="back-btn" aria-label="Kembali">&larr;</a>
+        <div class="chat-user-avatar" aria-hidden="true">
+            <?php if ($partnerAvatarUrl): ?>
+            <img src="<?= h($partnerAvatarUrl) ?>" class="chat-user-avatar-image" alt="">
+            <?php else: ?>
+            <?= h(avatarInitial($partner['full_name'] ?? '')) ?>
+            <?php endif; ?>
+        </div>
         <div class="chat-user">
             <strong><?= h($partner['full_name']) ?></strong>
             <span class="user-role"><?= $partner['role'] === 'hrd' ? 'HRD' : 'Kandidat' ?></span>
@@ -19,7 +27,10 @@
     <form class="chat-input" id="chat-form">
         <?= csrfField() ?>
         <input type="hidden" name="to_user_id" value="<?= (int) $partner['id'] ?>">
-        <input type="text" name="content" maxlength="1000" placeholder="Ketik pesan..." autocomplete="off" required>
+        <div class="chat-input-field">
+            <textarea name="content" maxlength="1000" placeholder="Ketik pesan..." autocomplete="off" rows="2" required></textarea>
+            <small class="chat-input-hint">Enter untuk kirim, Shift+Enter untuk baris baru.</small>
+        </div>
         <button type="submit" class="btn btn-primary">Kirim</button>
     </form>
 </div>
@@ -30,7 +41,7 @@
     const partnerId = <?= (int) $partner['id'] ?>;
     const messagesContainer = document.getElementById('messages-container');
     const chatForm = document.getElementById('chat-form');
-    const messageInput = chatForm.querySelector('input[name="content"]');
+    const messageInput = chatForm.querySelector('textarea[name="content"]');
     const sendButton = chatForm.querySelector('button[type="submit"]');
     let lastId = <?= !empty($messages) ? (int) end($messages)['id'] : 0 ?>;
     let isLoading = false;
@@ -98,6 +109,30 @@
         }
     }
 
+    function resizeInput() {
+        if (!messageInput) {
+            return;
+        }
+
+        messageInput.style.height = 'auto';
+        messageInput.style.height = Math.min(messageInput.scrollHeight, 160) + 'px';
+    }
+
+    if (messageInput) {
+        resizeInput();
+        messageInput.addEventListener('input', resizeInput);
+        messageInput.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+                event.preventDefault();
+                if (typeof chatForm.requestSubmit === 'function') {
+                    chatForm.requestSubmit();
+                } else {
+                    chatForm.dispatchEvent(new Event('submit', { cancelable: true }));
+                }
+            }
+        });
+    }
+
     chatForm.addEventListener('submit', async function (event) {
         event.preventDefault();
 
@@ -122,6 +157,7 @@
             const data = await response.json();
             if (data.success) {
                 messageInput.value = '';
+                resizeInput();
                 await loadMessages();
             } else if (data.message) {
                 alert(data.message);
