@@ -18,7 +18,7 @@ class Profile extends Controller {
         }
         
         $user = db()->row(
-            "SELECT * FROM users WHERE id = ?",
+            "SELECT * FROM users WHERE user_id = ?",
             [$_SESSION['user_id']]
         );
         
@@ -42,7 +42,7 @@ class Profile extends Controller {
         }
         
         $user = db()->row(
-            "SELECT * FROM users WHERE id = ?",
+            "SELECT * FROM users WHERE user_id = ?",
             [$_SESSION['user_id']]
         );
         
@@ -98,7 +98,7 @@ class Profile extends Controller {
             $params[] = $avatarFile;
         }
 
-        $sql .= " WHERE id = ?";
+        $sql .= " WHERE user_id = ?";
         $params[] = $_SESSION['user_id'];
         
         db()->execute($sql, $params);
@@ -130,10 +130,10 @@ class Profile extends Controller {
             redirect('profile');
         }
 
-        $current = db()->row("SELECT avatar FROM users WHERE id = ?", [$_SESSION['user_id']]);
+        $current = db()->row("SELECT avatar FROM users WHERE user_id = ?", [$_SESSION['user_id']]);
 
         db()->execute(
-            "UPDATE users SET avatar = ? WHERE id = ?",
+            "UPDATE users SET avatar = ? WHERE user_id = ?",
             [$upload['filename'], $_SESSION['user_id']]
         );
 
@@ -181,7 +181,7 @@ class Profile extends Controller {
         $confirm_password = $_POST['confirm_password'] ?? '';
         
         // Validasi
-        $user = db()->row("SELECT password FROM users WHERE id = ?", [$_SESSION['user_id']]);
+        $user = db()->row("SELECT password FROM users WHERE user_id = ?", [$_SESSION['user_id']]);
         
         if (!verifyPassword($current_password, $user['password'])) {
             setFlash('error', 'Password saat ini salah');
@@ -199,7 +199,7 @@ class Profile extends Controller {
         }
         
         db()->execute(
-            "UPDATE users SET password = ? WHERE id = ?",
+            "UPDATE users SET password = ? WHERE user_id = ?",
             [hashPassword($new_password), $_SESSION['user_id']]
         );
         

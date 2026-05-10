@@ -3,6 +3,15 @@
 
     <?php
     $showMobileBottomNav = isLoggedIn() && !hasRole('hrd') && !hasRole('admin');
+    $unreadCount = 0;
+    if (isLoggedIn()) {
+        try {
+            $row = db()->row("SELECT COUNT(*) as cnt FROM messages WHERE to_user_id = ? AND is_read = 0", [$_SESSION['user_id']]);
+            $unreadCount = (int) ($row['cnt'] ?? 0);
+        } catch (Throwable $e) {
+            $unreadCount = 0;
+        }
+    }
     $currentRoute = trim((string) ($_GET['route'] ?? 'dashboard'), '/');
     $currentRoute = $currentRoute === '' ? 'dashboard' : $currentRoute;
     $routeSegments = explode('/', strtolower($currentRoute));
@@ -48,6 +57,9 @@
                 </svg>
             </span>
             <span class="mobile-bottom-nav__label">Chat</span>
+            <?php if (!empty($unreadCount) && $unreadCount > 0): ?>
+            <span class="nav-unread-badge" aria-hidden="true"><?= (int) $unreadCount ?></span>
+            <?php endif; ?>
         </a>
         <a href="<?= BASE_URL ?>profile" class="mobile-bottom-nav__item <?= $mobileActivePage === 'profile' ? 'is-active' : '' ?>" <?= $mobileActivePage === 'profile' ? 'aria-current="page"' : '' ?>>
             <span class="mobile-bottom-nav__icon" aria-hidden="true">
@@ -71,10 +83,74 @@
     (function () {
         var toggle = document.getElementById('menu-toggle');
         var menu = document.getElementById('nav-menu');
-        if (!toggle || !menu) return;
+        var dropdowns = document.querySelectorAll('[data-dropdown]');
 
-        toggle.addEventListener('click', function () {
-            menu.classList.toggle('open');
+        function closeTabletMenu() {
+            if (!menu || !toggle) return;
+            menu.classList.remove('open');
+            toggle.setAttribute('aria-expanded', 'false');
+        }
+
+        if (toggle && menu) {
+            toggle.addEventListener('click', function (event) {
+                event.stopPropagation();
+                menu.classList.toggle('open');
+                var expanded = toggle.getAttribute('aria-expanded') === 'true';
+                toggle.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+            });
+        }
+
+        function closeAllDropdowns(exceptDropdown) {
+            dropdowns.forEach(function (dropdown) {
+                if (exceptDropdown && dropdown === exceptDropdown) {
+                    return;
+                }
+
+                dropdown.classList.remove('is-open');
+                var trigger = dropdown.querySelector('[data-dropdown-toggle]');
+                if (trigger) {
+                    trigger.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
+
+        dropdowns.forEach(function (dropdown) {
+            var trigger = dropdown.querySelector('[data-dropdown-toggle]');
+            var panel = dropdown.querySelector('[data-dropdown-menu]');
+            if (!trigger || !panel) return;
+
+            trigger.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                var isOpen = dropdown.classList.contains('is-open');
+                closeAllDropdowns(dropdown);
+                dropdown.classList.toggle('is-open', !isOpen);
+                trigger.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+            });
+
+            panel.addEventListener('click', function (event) {
+                event.stopPropagation();
+            });
+        });
+
+        document.addEventListener('click', function () {
+            closeAllDropdowns();
+            closeTabletMenu();
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                closeAllDropdowns();
+                closeTabletMenu();
+            }
+        });
+
+        window.addEventListener('resize', function () {
+            var width = window.innerWidth || document.documentElement.clientWidth;
+            if (width <= 760 || width > 1024) {
+                closeTabletMenu();
+            }
         });
     })();
     </script>

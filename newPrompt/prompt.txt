@@ -1,0 +1,10 @@
+1. Terapkan di mobile view agar chat bisa bikin baris baru dengan mengllik tombol 
+panah ke bawah kiri (enter versi hp) yang ada di keyboard handphone.. Dan mengirim Diwakili dengan tombol 
+panah kanan (bukan di keyboard hp) yang ada di samping kanan kolom input pesan (lambangnya ">")..
+2. Rapihkan tata letak tulisan di semua halaman..
+3. Di tampilan mobile, muncul angka di atas kanan logo chat di tampilan mobile kalau ada yang chat (di halaman akun user maupun hrd)
+4. dan di menu chat, buat agar username dan potoprofile hrd maupun user tetap berada di atas / tidak ikut kescroll (menghilang) ketika discroll chatnya (mungkin
+seperti fixed position)..
+5. lihat gambar login page (tampilan mobile).. ubah tombol menu jadi tombol dengan simbol hamburger.. lalu Ubah kata "Masuk ke DST Recruitment" di container login di tengah jadi "Login".. hilangkan footer di tampilan mobile..
+
+tiru 5 perintah di atas berdasarkan gambar yang dikirim

@@ -32,11 +32,11 @@ class Jobs extends Controller {
         }
         
         $jobs = db()->select(
-            "SELECT j.*, 
-                    (SELECT COUNT(*) FROM applications WHERE job_id = j.id) as applicant_count,
+            "SELECT j.job_id as id, j.*, 
+                    (SELECT COUNT(*) FROM applications WHERE job_id = j.job_id) as applicant_count,
                     u.full_name as created_by_name
              FROM jobs j
-             JOIN users u ON j.created_by = u.id
+             JOIN users u ON j.created_by = u.user_id
              WHERE $where
              ORDER BY j.created_at DESC",
             $params
@@ -69,10 +69,10 @@ class Jobs extends Controller {
         }
         
         $job = db()->row(
-            "SELECT j.*, u.full_name as created_by_name 
+            "SELECT j.job_id as id, j.*, u.full_name as created_by_name 
              FROM jobs j 
-             JOIN users u ON j.created_by = u.id 
-             WHERE j.id = ?",
+             JOIN users u ON j.created_by = u.user_id 
+             WHERE j.job_id = ?",
             [$id]
         );
         
@@ -122,7 +122,7 @@ class Jobs extends Controller {
         }
         
         // Ambil detail job
-        $job = db()->row("SELECT * FROM jobs WHERE id = ? AND status = 'open'", [$job_id]);
+        $job = db()->row("SELECT job_id as id, jobs.* FROM jobs WHERE job_id = ? AND status = 'open'", [$job_id]);
         
         if (!$job) {
             setFlash('error', 'Lowongan tidak ditemukan atau sudah ditutup');
@@ -141,7 +141,7 @@ class Jobs extends Controller {
         }
         
         // Ambil data profil user
-        $user = db()->row("SELECT * FROM users WHERE id = ?", [$_SESSION['user_id']]);
+        $user = db()->row("SELECT * FROM users WHERE user_id = ?", [$_SESSION['user_id']]);
         
         $data = [
             'title' => 'Lamar ' . $job['title'] . ' - DST Recruitment',
@@ -175,7 +175,7 @@ class Jobs extends Controller {
         $job_id = intval($_POST['job_id'] ?? 0);
         
         // Verifikasi job exists
-        $job = db()->row("SELECT * FROM jobs WHERE id = ? AND status = 'open'", [$job_id]);
+        $job = db()->row("SELECT job_id as id, jobs.* FROM jobs WHERE job_id = ? AND status = 'open'", [$job_id]);
         
         if (!$job) {
             setFlash('error', 'Lowongan tidak ditemukan');
@@ -207,7 +207,7 @@ class Jobs extends Controller {
         $cv_file = $upload_result['filename'];
         
         // Ambil skills dari profil user
-        $user = db()->row("SELECT skills FROM users WHERE id = ?", [$_SESSION['user_id']]);
+        $user = db()->row("SELECT skills FROM users WHERE user_id = ?", [$_SESSION['user_id']]);
         
         // Hitung skill match score
         $score = 0;
@@ -249,9 +249,9 @@ class Jobs extends Controller {
         $this->requireHRD();
         
         $jobs = db()->select(
-            "SELECT j.*, 
-                    (SELECT COUNT(*) FROM applications WHERE job_id = j.id) as applicant_count,
-                    (SELECT COUNT(*) FROM applications WHERE job_id = j.id AND status = 'accepted') as accepted_count
+            "SELECT j.job_id as id, j.*, 
+                    (SELECT COUNT(*) FROM applications WHERE job_id = j.job_id) as applicant_count,
+                    (SELECT COUNT(*) FROM applications WHERE job_id = j.job_id AND status = 'accepted') as accepted_count
              FROM jobs j
              ORDER BY j.created_at DESC"
         );
@@ -275,7 +275,7 @@ class Jobs extends Controller {
         
         $job = null;
         if ($id) {
-            $job = db()->row("SELECT * FROM jobs WHERE id = ?", [$id]);
+            $job = db()->row("SELECT job_id as id, jobs.* FROM jobs WHERE job_id = ?", [$id]);
             if (!$job) {
                 setFlash('error', 'Lowongan tidak ditemukan');
                 redirect('jobs/manage');
@@ -327,7 +327,7 @@ class Jobs extends Controller {
             $success = db()->execute(
                 "UPDATE jobs SET title = ?, department = ?, location = ?, type = ?, 
                  salary_min = ?, salary_max = ?, description = ?, requirements = ?, skills = ?, updated_at = NOW() 
-                 WHERE id = ?",
+                 WHERE job_id = ?",
                 [$title, $department, $location, $type, $salary_min, $salary_max, $description, $requirements, $skills, $id]
             );
             
@@ -367,7 +367,7 @@ class Jobs extends Controller {
         }
         
         // Hapus lowongan (dan aplikasinya akan terhapus karena ON DELETE CASCADE)
-        db()->execute("DELETE FROM jobs WHERE id = ?", [$id]);
+        db()->execute("DELETE FROM jobs WHERE job_id = ?", [$id]);
         
         setFlash('success', 'Lowongan berhasil dihapus');
         redirect('jobs/manage');
@@ -385,11 +385,11 @@ class Jobs extends Controller {
 
         requireValidCsrf();
         
-        $job = db()->row("SELECT status FROM jobs WHERE id = ?", [$id]);
+        $job = db()->row("SELECT status FROM jobs WHERE job_id = ?", [$id]);
         
         if ($job) {
             $new_status = $job['status'] === 'open' ? 'closed' : 'open';
-            db()->execute("UPDATE jobs SET status = ?, updated_at = NOW() WHERE id = ?", [$new_status, $id]);
+            db()->execute("UPDATE jobs SET status = ?, updated_at = NOW() WHERE job_id = ?", [$new_status, $id]);
             setFlash('success', 'Status lowongan diubah');
         }
         

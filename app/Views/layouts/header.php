@@ -9,43 +9,159 @@
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/style.css">
 </head>
-<?php $hasMobileBottomNav = isLoggedIn() && !hasRole('hrd') && !hasRole('admin'); ?>
-<body class="<?= $hasMobileBottomNav ? 'has-mobile-bottom-nav' : '' ?>">
+<?php
+$isLoggedIn = isLoggedIn();
+$isStaff = $isLoggedIn && (hasRole('hrd') || hasRole('admin'));
+$hasMobileBottomNav = $isLoggedIn && !$isStaff;
+$bodyClasses = [];
+if ($hasMobileBottomNav) {
+    $bodyClasses[] = 'has-mobile-bottom-nav';
+}
+if ($isLoggedIn) {
+    $bodyClasses[] = 'is-authenticated';
+}
+?>
+<body class="<?= h(implode(' ', $bodyClasses)) ?>">
     <?php
     $currentRoute = trim((string) ($_GET['route'] ?? 'dashboard'), '/');
     $currentRoute = $currentRoute === '' ? 'dashboard' : $currentRoute;
     $routeSegments = explode('/', strtolower($currentRoute));
     $currentSection = $routeSegments[0] ?? 'dashboard';
+    $currentAction = $routeSegments[1] ?? 'index';
     $currentPage = $page ?? '';
 
-    $isStaff = isLoggedIn() && (hasRole('hrd') || hasRole('admin'));
-    $isDashboardActive = in_array($currentPage, ['dashboard', 'dashboard-hrd'], true) || $currentSection === 'dashboard';
-    $isJobsActive = in_array($currentPage, ['jobs', 'job-detail', 'apply'], true) || $currentSection === 'jobs';
-    $isApplicationsActive = in_array($currentPage, ['my-applications', 'application-detail', 'hrd-applications'], true) || $currentSection === 'applications';
-    $isChatActive = in_array($currentPage, ['chat', 'chat-room'], true) || $currentSection === 'chat';
-    $isProfileActive = in_array($currentPage, ['profile', 'profile-edit', 'change-password'], true) || $currentSection === 'profile';
+    // Keep only one top-level nav item active at a time.
+    $activeNavKey = 'dashboard';
+    if (in_array($currentPage, ['manage-jobs', 'job-form'], true) || ($currentSection === 'jobs' && $currentAction === 'manage')) {
+        $activeNavKey = 'manage-jobs';
+    } elseif (in_array($currentPage, ['jobs', 'job-detail', 'apply'], true) || $currentSection === 'jobs') {
+        $activeNavKey = 'jobs';
+    } elseif (in_array($currentPage, ['chat', 'chat-room'], true) || $currentSection === 'chat') {
+        $activeNavKey = 'chat';
+    } elseif (in_array($currentPage, ['profile', 'profile-edit', 'change-password'], true) || $currentSection === 'profile') {
+        $activeNavKey = 'profile';
+    } elseif ($currentPage === 'application-detail') {
+        $activeNavKey = $isStaff ? 'pelamar' : 'applications';
+    } elseif ($currentPage === 'my-applications') {
+        $activeNavKey = 'applications';
+    } elseif (in_array($currentPage, ['hrd-applications'], true)) {
+        $activeNavKey = 'pelamar';
+    } elseif ($currentSection === 'applications') {
+        $activeNavKey = $isStaff ? 'pelamar' : 'applications';
+    } elseif (in_array($currentPage, ['dashboard', 'dashboard-hrd'], true) || $currentSection === 'dashboard') {
+        $activeNavKey = 'dashboard';
+    }
     ?>
+    <?php
+    // Calculate unread messages count for badge (safe: only when logged-in)
+    $unreadCount = 0;
+    $currentUserAvatarUrl = null;
+    if ($isLoggedIn) {
+        try {
+            $row = db()->row("SELECT COUNT(*) as cnt FROM messages WHERE to_user_id = ? AND is_read = 0", [$_SESSION['user_id']]);
+            $unreadCount = (int) ($row['cnt'] ?? 0);
+        } catch (Throwable $e) {
+            $unreadCount = 0;
+        }
+
+        try {
+            $row = db()->row("SELECT avatar FROM users WHERE user_id = ?", [$_SESSION['user_id']]);
+            $currentUserAvatarUrl = avatarUrl($row['avatar'] ?? null);
+        } catch (Throwable $e) {
+            $currentUserAvatarUrl = null;
+        }
+    }
+    $currentUserName = (string) ($_SESSION['full_name'] ?? 'Akun');
+    $currentUserInitial = avatarInitial($currentUserName);
+    ?>
+
     <nav class="navbar">
         <div class="container nav-wrap">
             <a href="<?= BASE_URL ?>" class="brand">DST Recruitment</a>
-
-            <button class="menu-toggle" id="menu-toggle" aria-label="Buka menu">Menu</button>
-
-            <?php if (isLoggedIn()): ?>
-            <ul class="nav-menu" id="nav-menu">
-                <li><a href="<?= BASE_URL ?>dashboard" class="<?= $isDashboardActive ? 'active' : '' ?>"><?= $isStaff ? 'Dashboard' : 'Home' ?></a></li>
-                <li><a href="<?= BASE_URL ?>jobs" class="<?= $isJobsActive ? 'active' : '' ?>">Lowongan</a></li>
-                <?php if (hasRole('hrd') || hasRole('admin')): ?>
-                <li><a href="<?= BASE_URL ?>jobs/manage" class="<?= in_array($currentPage, ['manage-jobs', 'job-form'], true) ? 'active' : '' ?>">Kelola Lowongan</a></li>
-                <li><a href="<?= BASE_URL ?>applications/hrd" class="<?= $isApplicationsActive ? 'active' : '' ?>">Pelamar</a></li>
-                <?php else: ?>
-                <li><a href="<?= BASE_URL ?>applications" class="<?= $isApplicationsActive ? 'active' : '' ?>">Lamaran Saya</a></li>
+            <?php if ($isLoggedIn): ?>
+            <a href="<?= BASE_URL ?>chat" class="mobile-chat-shortcut <?= $activeNavKey === 'chat' ? 'is-active' : '' ?>" aria-label="Buka chat">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M12 4C7.03 4 3 7.47 3 11.75C3 13.87 3.99 15.78 5.6 17.12L5.13 20.25L8.15 18.85C9.34 19.25 10.64 19.5 12 19.5C16.97 19.5 21 16.03 21 11.75C21 7.47 16.97 4 12 4Z" />
+                    <path d="M8.5 11.75H15.5" />
+                    <path d="M8.5 14.5H12.75" />
+                </svg>
+                <?php if ($unreadCount > 0): ?>
+                <span class="mobile-chat-shortcut__badge" aria-hidden="true"><?= (int) $unreadCount ?></span>
                 <?php endif; ?>
-                <li><a href="<?= BASE_URL ?>chat" class="<?= $isChatActive ? 'active' : '' ?>">Pesan</a></li>
-                <li class="dropdown">
-                    <a href="#" class="dropbtn <?= $isProfileActive ? 'active' : '' ?>"><?= h($_SESSION['full_name'] ?? 'Akun') ?></a>
-                    <div class="dropdown-content">
-                        <a href="<?= BASE_URL ?>profile" class="<?= $isProfileActive ? 'active' : '' ?>">Profil</a>
+            </a>
+            <?php endif; ?>
+
+            <button class="menu-toggle" id="menu-toggle" aria-label="Buka menu" aria-expanded="false" aria-controls="nav-menu">
+                <span class="menu-toggle__icon" aria-hidden="true">&#9776;</span>
+            </button>
+
+            <?php if ($isLoggedIn): ?>
+            <div class="mobile-profile-dropdown dropdown" data-dropdown>
+                <button
+                    type="button"
+                    class="mobile-profile-trigger"
+                    aria-label="Buka menu akun"
+                    aria-expanded="false"
+                    aria-controls="mobile-profile-menu"
+                    data-dropdown-toggle
+                >
+                    <?php if ($currentUserAvatarUrl): ?>
+                    <img src="<?= h($currentUserAvatarUrl) ?>" class="mobile-profile-avatar-image" alt="Foto profil <?= h($currentUserName) ?>">
+                    <?php else: ?>
+                    <span class="mobile-profile-avatar-fallback"><?= h($currentUserInitial) ?></span>
+                    <?php endif; ?>
+                </button>
+                <div class="dropdown-content mobile-profile-menu" id="mobile-profile-menu" data-dropdown-menu>
+                    <?php if ($isStaff): ?>
+                    <a href="<?= BASE_URL ?>jobs/manage">Kelola Lowongan</a>
+                    <a href="<?= BASE_URL ?>applications/hrd">Pelamar</a>
+                    <?php endif; ?>
+                    <?php if (!$isStaff): ?>
+                    <a href="<?= BASE_URL ?>jobs">Lowongan</a>
+                    <?php endif; ?>
+                    <a href="<?= BASE_URL ?>profile">Profil Saya</a>
+                    <a href="<?= BASE_URL ?>auth/logout">Logout</a>
+                </div>
+            </div>
+
+            <ul class="nav-menu" id="nav-menu">
+                <li><a href="<?= BASE_URL ?>dashboard" class="<?= $activeNavKey === 'dashboard' ? 'active' : '' ?>"><?= $isStaff ? 'Dashboard' : 'Home' ?></a></li>
+                <?php if (!$isStaff): ?>
+                <li><a href="<?= BASE_URL ?>jobs" class="<?= $activeNavKey === 'jobs' ? 'active' : '' ?>">Lowongan</a></li>
+                <?php endif; ?>
+                <?php if ($isStaff): ?>
+                <li><a href="<?= BASE_URL ?>jobs/manage" class="<?= $activeNavKey === 'manage-jobs' ? 'active' : '' ?>">Kelola Lowongan</a></li>
+                <li><a href="<?= BASE_URL ?>applications/hrd" class="<?= $activeNavKey === 'pelamar' ? 'active' : '' ?>">Pelamar</a></li>
+                <?php else: ?>
+                <li><a href="<?= BASE_URL ?>applications" class="<?= $activeNavKey === 'applications' ? 'active' : '' ?>">Lamaran Saya</a></li>
+                <?php endif; ?>
+                <li>
+                    <a href="<?= BASE_URL ?>chat" class="nav-chat-link <?= $activeNavKey === 'chat' ? 'active' : '' ?>">
+                        <span class="nav-chat-link__icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path d="M12 4C7.03 4 3 7.47 3 11.75C3 13.87 3.99 15.78 5.6 17.12L5.13 20.25L8.15 18.85C9.34 19.25 10.64 19.5 12 19.5C16.97 19.5 21 16.03 21 11.75C21 7.47 16.97 4 12 4Z" />
+                                <path d="M8.5 11.75H15.5" />
+                                <path d="M8.5 14.5H12.75" />
+                            </svg>
+                            <?php if ($unreadCount > 0): ?>
+                            <span class="nav-chat-link__badge" aria-hidden="true"><?= (int) $unreadCount ?></span>
+                            <?php endif; ?>
+                        </span>
+                        <span class="nav-chat-link__label">Pesan</span>
+                    </a>
+                </li>
+                <li class="dropdown nav-account-dropdown" data-dropdown>
+                    <button
+                        type="button"
+                        class="dropbtn <?= $activeNavKey === 'profile' ? 'active' : '' ?>"
+                        aria-expanded="false"
+                        aria-controls="desktop-profile-menu"
+                        data-dropdown-toggle
+                    >
+                        <?= h($currentUserName) ?>
+                    </button>
+                    <div class="dropdown-content" id="desktop-profile-menu" data-dropdown-menu>
+                        <a href="<?= BASE_URL ?>profile" class="<?= $activeNavKey === 'profile' ? 'active' : '' ?>">Profil</a>
                         <a href="<?= BASE_URL ?>auth/logout">Logout</a>
                     </div>
                 </li>

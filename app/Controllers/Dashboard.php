@@ -26,7 +26,7 @@ class Dashboard extends Controller {
         
         // Ambil data user lengkap
         $user = db()->row(
-            "SELECT * FROM users WHERE id = ?",
+            "SELECT * FROM users WHERE user_id = ?",
             [$user_id]
         );
         
@@ -34,7 +34,7 @@ class Dashboard extends Controller {
         $my_applications = db()->select(
             "SELECT a.*, j.title as job_title, j.location, j.type, j.department 
              FROM applications a 
-             JOIN jobs j ON a.job_id = j.id 
+             JOIN jobs j ON a.job_id = j.job_id 
              WHERE a.user_id = ? 
              ORDER BY a.applied_at DESC",
             [$user_id]
@@ -42,7 +42,7 @@ class Dashboard extends Controller {
         
         // Ambil lowongan terbaru
         $recent_jobs = db()->select(
-            "SELECT * FROM jobs WHERE status = 'open' ORDER BY created_at DESC LIMIT 6"
+            "SELECT job_id as id, jobs.* FROM jobs WHERE status = 'open' ORDER BY created_at DESC LIMIT 6"
         );
         
         // Hitung statistik
@@ -123,16 +123,16 @@ class Dashboard extends Controller {
             "SELECT a.*, u.full_name as candidate_name, u.email as candidate_email, u.skills, u.education, u.avatar as candidate_avatar,
                     j.title as job_title, j.location 
              FROM applications a
-             JOIN users u ON a.user_id = u.id
-             JOIN jobs j ON a.job_id = j.id
+             JOIN users u ON a.user_id = u.user_id
+             JOIN jobs j ON a.job_id = j.job_id
              ORDER BY a.applied_at DESC
              LIMIT 10"
         );
         
         // Lowongan aktif
         $active_jobs = db()->select(
-            "SELECT j.*, 
-                    (SELECT COUNT(*) FROM applications WHERE job_id = j.id) as applicant_count
+            "SELECT j.job_id as id, j.*, 
+                    (SELECT COUNT(*) FROM applications WHERE job_id = j.job_id) as applicant_count
              FROM jobs j
              WHERE j.status = 'open'
              ORDER BY j.created_at DESC"

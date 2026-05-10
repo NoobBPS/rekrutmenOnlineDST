@@ -1,6 +1,6 @@
 <div class="auth-container">
     <div class="auth-card">
-        <h2>Masuk ke DST Recruitment</h2>
+        <h2>Login</h2>
         <form action="<?= BASE_URL ?>auth/doLogin" method="POST">
             <?= csrfField() ?>
             <div class="form-group">

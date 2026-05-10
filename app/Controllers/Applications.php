@@ -32,7 +32,7 @@ class Applications extends Controller {
         $applications = db()->select(
             "SELECT a.*, j.title as job_title, j.location, j.type, j.department 
              FROM applications a 
-             JOIN jobs j ON a.job_id = j.id 
+             JOIN jobs j ON a.job_id = j.job_id 
              WHERE a.user_id = ? 
              ORDER BY a.applied_at DESC",
             [$user_id]
@@ -75,8 +75,8 @@ class Applications extends Controller {
             "SELECT a.*, j.title as job_title, j.location, j.type, j.description, j.requirements, j.skills,
                     u.full_name as hrd_name
              FROM applications a
-             JOIN jobs j ON a.job_id = j.id
-             LEFT JOIN users u ON j.created_by = u.id
+             JOIN jobs j ON a.job_id = j.job_id
+             LEFT JOIN users u ON j.created_by = u.user_id
              WHERE a.id = ?",
             [$id]
         );
@@ -97,7 +97,7 @@ class Applications extends Controller {
         $application_saw = null;
         $job_saw_recommendation = null;
         if (hasRole('hrd') || hasRole('admin') || $application['user_id'] == $_SESSION['user_id']) {
-            $candidate = db()->row("SELECT * FROM users WHERE id = ?", [$application['user_id']]);
+            $candidate = db()->row("SELECT * FROM users WHERE user_id = ?", [$application['user_id']]);
         }
 
         if ($candidate) {
@@ -108,8 +108,8 @@ class Applications extends Controller {
                         j.title as job_title, j.department as job_department, j.skills as job_skills,
                         j.requirements as job_requirements, j.description as job_description
                  FROM applications a
-                 JOIN users u ON a.user_id = u.id
-                 JOIN jobs j ON a.job_id = j.id
+                 JOIN users u ON a.user_id = u.user_id
+                 JOIN jobs j ON a.job_id = j.job_id
                  WHERE a.job_id = ?",
                 [$application['job_id']]
             );
@@ -183,8 +183,8 @@ class Applications extends Controller {
                     j.title as job_title, j.location, j.department as job_department, j.skills as job_skills,
                     j.requirements as job_requirements, j.description as job_description
              FROM applications a
-             JOIN users u ON a.user_id = u.id
-             JOIN jobs j ON a.job_id = j.id
+             JOIN users u ON a.user_id = u.user_id
+             JOIN jobs j ON a.job_id = j.job_id
              WHERE $where
              ORDER BY a.applied_at DESC",
             $params
@@ -207,7 +207,7 @@ class Applications extends Controller {
         }
         
         // Semua lowongan untuk filter
-        $jobs = db()->select("SELECT id, title FROM jobs WHERE status = 'open' ORDER BY title");
+        $jobs = db()->select("SELECT job_id as id, title FROM jobs WHERE status = 'open' ORDER BY title");
         
         // Hitung statistik per status
         $stats = [
@@ -271,8 +271,8 @@ class Applications extends Controller {
                     j.title as job_title, j.department as job_department, j.skills as job_skills,
                     j.requirements as job_requirements, j.description as job_description
              FROM applications a
-             JOIN users u ON a.user_id = u.id
-             JOIN jobs j ON a.job_id = j.id
+             JOIN users u ON a.user_id = u.user_id
+             JOIN jobs j ON a.job_id = j.job_id
              WHERE a.job_id = ?",
             [$job_id]
         );
@@ -401,8 +401,8 @@ class Applications extends Controller {
                         j.title as job_title, j.department as job_department, j.skills as job_skills,
                         j.requirements as job_requirements, j.description as job_description
                  FROM applications a
-                 JOIN users u ON a.user_id = u.id
-                 JOIN jobs j ON a.job_id = j.id
+                 JOIN users u ON a.user_id = u.user_id
+                 JOIN jobs j ON a.job_id = j.job_id
                  WHERE a.job_id = ?",
                 [$application['job_id']]
             );

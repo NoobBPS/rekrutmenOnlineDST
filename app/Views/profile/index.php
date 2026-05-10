@@ -8,7 +8,7 @@ if (!isset($user) || $user === null) {
         $uid = $_SESSION['user_id'] ?? null;
         if ($uid) {
             try {
-                $fetched = db()->row("SELECT * FROM users WHERE id = ?", [$uid]);
+                $fetched = db()->row("SELECT * FROM users WHERE user_id = ?", [$uid]);
                 if (!empty($fetched) && is_array($fetched)) {
                     $user = $fetched;
                 }

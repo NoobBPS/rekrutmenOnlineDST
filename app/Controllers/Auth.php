@@ -14,6 +14,10 @@ class Auth extends Controller {
      */
     public function login() {
         if (isLoggedIn()) {
+            if (hasRole('hrd') || hasRole('admin')) {
+                redirect('dashboard/hrd');
+            }
+
             redirect('dashboard');
         }
         
@@ -77,15 +81,25 @@ class Auth extends Controller {
             setFlash('error', 'Akun Anda dinonaktifkan');
             redirect('auth/login');
         }
+
+        $user_id = (int) ($user['user_id'] ?? $user['id'] ?? 0);
+        if ($user_id <= 0) {
+            setFlash('error', 'Akun tidak valid');
+            redirect('auth/login');
+        }
         
-        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['user_id'] = $user_id;
         $_SESSION['email'] = $user['email'];
         $_SESSION['full_name'] = $user['full_name'];
         $_SESSION['role'] = $user['role'];
         session_regenerate_id(true);
         
         setFlash('success', 'Selamat datang, ' . $user['full_name'] . '!');
-        
+
+        if (($user['role'] ?? '') === 'hrd' || ($user['role'] ?? '') === 'admin') {
+            redirect('dashboard/hrd');
+        }
+
         redirect('dashboard');
     }
     
