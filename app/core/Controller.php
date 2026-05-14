@@ -45,8 +45,17 @@ class Controller {
     protected function requireHRD() {
         $this->requireLogin();
 
-        if (!hasRole('hrd') && !hasRole('admin')) {
+        if (!hasRole('hrd')) {
             setFlash('error', 'Akses ditolak');
+            $this->redirect('dashboard');
+        }
+    }
+
+    protected function requireAdmin() {
+        $this->requireLogin();
+
+        if (!hasRole('admin')) {
+            setFlash('error', 'Akses ditolak. Hanya admin yang dapat mengelola lowongan.');
             $this->redirect('dashboard');
         }
     }

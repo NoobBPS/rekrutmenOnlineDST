@@ -11,7 +11,9 @@
 </head>
 <?php
 $isLoggedIn = isLoggedIn();
-$isStaff = $isLoggedIn && (hasRole('hrd') || hasRole('admin'));
+$isHRD = $isLoggedIn && hasRole('hrd');
+$isAdmin = $isLoggedIn && hasRole('admin');
+$isStaff = $isHRD || $isAdmin;
 $hasMobileBottomNav = $isLoggedIn && !$isStaff;
 $bodyClasses = [];
 if ($hasMobileBottomNav) {
@@ -112,8 +114,10 @@ if ($isLoggedIn) {
                     <?php endif; ?>
                 </button>
                 <div class="dropdown-content mobile-profile-menu" id="mobile-profile-menu" data-dropdown-menu>
-                    <?php if ($isStaff): ?>
+                    <?php if ($isAdmin): ?>
                     <a href="<?= BASE_URL ?>jobs/manage">Kelola Lowongan</a>
+                    <?php endif; ?>
+                    <?php if ($isHRD): ?>
                     <a href="<?= BASE_URL ?>applications/hrd">Pelamar</a>
                     <?php endif; ?>
                     <?php if (!$isStaff): ?>
@@ -125,14 +129,19 @@ if ($isLoggedIn) {
             </div>
 
             <ul class="nav-menu" id="nav-menu">
-                <li><a href="<?= BASE_URL ?>dashboard" class="<?= $activeNavKey === 'dashboard' ? 'active' : '' ?>"><?= $isStaff ? 'Dashboard' : 'Home' ?></a></li>
+                <?php if (!$isAdmin): ?>
+                <li><a href="<?= BASE_URL ?>dashboard" class="<?= $activeNavKey === 'dashboard' ? 'active' : '' ?>"><?= $isHRD ? 'Dashboard' : 'Home' ?></a></li>
+                <?php endif; ?>
                 <?php if (!$isStaff): ?>
                 <li><a href="<?= BASE_URL ?>jobs" class="<?= $activeNavKey === 'jobs' ? 'active' : '' ?>">Lowongan</a></li>
                 <?php endif; ?>
-                <?php if ($isStaff): ?>
+                <?php if ($isAdmin): ?>
                 <li><a href="<?= BASE_URL ?>jobs/manage" class="<?= $activeNavKey === 'manage-jobs' ? 'active' : '' ?>">Kelola Lowongan</a></li>
+                <?php endif; ?>
+                <?php if ($isHRD): ?>
                 <li><a href="<?= BASE_URL ?>applications/hrd" class="<?= $activeNavKey === 'pelamar' ? 'active' : '' ?>">Pelamar</a></li>
-                <?php else: ?>
+                <?php endif; ?>
+                <?php if (!$isStaff): ?>
                 <li><a href="<?= BASE_URL ?>applications" class="<?= $activeNavKey === 'applications' ? 'active' : '' ?>">Lamaran Saya</a></li>
                 <?php endif; ?>
                 <li>

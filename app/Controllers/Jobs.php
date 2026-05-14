@@ -111,8 +111,8 @@ class Jobs extends Controller {
     public function apply($job_id = null) {
         $this->requireLogin();
         
-        if (hasRole('hrd')) {
-            setFlash('error', 'HRD tidak bisa melamar pekerjaan');
+        if (hasRole('hrd') || hasRole('admin')) {
+            setFlash('error', 'HRD/Admin tidak bisa melamar pekerjaan');
             redirect('jobs');
         }
         
@@ -239,14 +239,14 @@ class Jobs extends Controller {
     }
     
     // ========================
-    // HRD Methods
+    // Admin Methods
     // ========================
     
     /**
-     * Kelola Lowongan - HRD
+     * Kelola Lowongan - Admin
      */
     public function manage() {
-        $this->requireHRD();
+        $this->requireAdmin();
         
         $jobs = db()->select(
             "SELECT j.job_id as id, j.*, 
@@ -268,10 +268,10 @@ class Jobs extends Controller {
     }
     
     /**
-     * Tambah/Edit Lowongan - HRD
+     * Tambah/Edit Lowongan - Admin
      */
     public function form($id = null) {
-        $this->requireHRD();
+        $this->requireAdmin();
         
         $job = null;
         if ($id) {
@@ -294,10 +294,10 @@ class Jobs extends Controller {
     }
     
     /**
-     * Simpan Lowongan - HRD
+     * Simpan Lowongan - Admin
      */
     public function save() {
-        $this->requireHRD();
+        $this->requireAdmin();
         
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             redirect('jobs/manage');
@@ -351,10 +351,10 @@ class Jobs extends Controller {
     }
     
     /**
-     * Hapus Lowongan - HRD
+     * Hapus Lowongan - Admin
      */
     public function delete($id) {
-        $this->requireHRD();
+        $this->requireAdmin();
         
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             redirect('jobs/manage');
@@ -377,7 +377,7 @@ class Jobs extends Controller {
      * Toggle Status Lowongan
      */
     public function toggleStatus($id) {
-        $this->requireHRD();
+        $this->requireAdmin();
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             redirect('jobs/manage');

@@ -12,8 +12,8 @@ Aplikasi rekrutmen calon pegawai untuk **PT Digdaya Solusi Teknologi (DST)**.
 - Untuk status final (`accepted/rejected`), kandidat melihat alasan keputusan + ringkasan SAW
 - Dashboard kandidat menampilkan pesan diterima/ditolak
 - Dashboard HRD untuk monitoring pipeline
-- HRD mengelola lowongan (CRUD sederhana)
-- HRD review pelamar + filter skill/pendidikan
+- Admin mengelola lowongan (tambah, edit, hapus, buka/tutup)
+- HRD review pelamar + filter skill/pendidikan + approve/reject lamaran
 - Chat kandidat-HRD, dengan aturan: **chat pertama hanya bisa dimulai HRD/Admin**
 
 ## Keamanan yang Sudah Diterapkan

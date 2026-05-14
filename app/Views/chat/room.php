@@ -1,8 +1,10 @@
 <?php
-$partner = $partner ?? ['id' => 0, 'full_name' => '', 'role' => '', 'avatar' => null];
-$messages = $messages ?? [];
-$applicationContext = $application_context ?? null;
+$partner = isset($partner) && is_array($partner) ? $partner : ['id' => 0, 'full_name' => '', 'role' => '', 'avatar' => null];
+$messages = isset($messages) && is_array($messages) ? $messages : [];
+$applicationContext = isset($application_context) && is_array($application_context) ? $application_context : [];
 $partnerAvatarUrl = avatarUrl($partner['avatar'] ?? null);
+$lastMessage = !empty($messages) ? end($messages) : null;
+$lastMessageId = is_array($lastMessage) ? (int) ($lastMessage['id'] ?? 0) : 0;
 ?>
 <div class="chat-room">
     <div class="chat-header">
@@ -17,38 +19,10 @@ $partnerAvatarUrl = avatarUrl($partner['avatar'] ?? null);
         <div class="chat-user">
             <strong><?= h($partner['full_name']) ?></strong>
             <span class="user-role"><?= in_array(($partner['role'] ?? ''), ['hrd', 'admin'], true) ? 'HRD' : 'Kandidat' ?></span>
-            <?php if (!empty($applicationContext)): ?>
-            <div class="chat-application-meta">
-                <span class="chat-application-job"><?= h(($applicationContext['job_title'] ?? '-') . ' • ' . ($applicationContext['location'] ?? '-')) ?></span>
-                <span class="chat-application-status">Status lamaran: <?= h($applicationContext['status'] ?? '-') ?></span>
-            </div>
-            <?php endif; ?>
         </div>
     </div>
-
-    <?php if (!empty($applicationContext) && !empty($applicationContext['benefits']) && is_array($applicationContext['benefits'])): ?>
-    <div class="chat-benefits-wrap">
-        <ul class="chat-benefits">
-            <?php foreach ($applicationContext['benefits'] as $benefit): ?>
-            <li><?= h($benefit) ?></li>
-            <?php endforeach; ?>
-        </ul>
-    </div>
-    <?php endif; ?>
 
     <div class="chat-messages" id="messages-container">
-        <?php if (!empty($applicationContext['cv_available']) && !empty($applicationContext['cv_url'])): ?>
-        <div class="message system" data-system="1">
-            <div class="message-bubble message-bubble-system">
-                <div class="message-content message-content-system">
-                    <strong>CV Pelamar</strong><br>
-                    Dokumen CV kandidat tersedia untuk proses review.
-                    <a href="<?= h((string) $applicationContext['cv_url']) ?>" target="_blank" rel="noopener noreferrer">Lihat / Download CV</a>
-                </div>
-            </div>
-        </div>
-        <?php endif; ?>
-
         <?php foreach ($messages as $msg): ?>
         <?php
             $isOwnMessage = (int) ($msg['from_user_id'] ?? 0) === (int) ($_SESSION['user_id'] ?? 0);
@@ -134,7 +108,7 @@ $partnerAvatarUrl = avatarUrl($partner['avatar'] ?? null);
 
     const defaultSendButtonText = sendButton ? sendButton.textContent : '>';
     const defaultHintText = hintElement ? hintElement.textContent : '';
-    let lastId = <?= !empty($messages) ? (int) end($messages)['id'] : 0 ?>;
+    let lastId = <?= $lastMessageId ?>;
     let isLoading = false;
     let isSending = false;
     let editingMessageId = 0;
@@ -290,8 +264,12 @@ $partnerAvatarUrl = avatarUrl($partner['avatar'] ?? null);
         contextTargetMessage = null;
     }
 
-    function openContextMenuForMessage(messageElement, x, y) {
+    function openContextMenuForMessage(messageElement) {
         if (!contextMenu || !messageElement || messageElement.dataset.system === '1') {
+            return;
+        }
+
+        if (messageElement.dataset.own !== '1' || messageElement.dataset.isDeleted === '1') {
             return;
         }
 
@@ -300,22 +278,31 @@ $partnerAvatarUrl = avatarUrl($partner['avatar'] ?? null);
         const canEdit = messageElement.dataset.canEdit === '1';
         const canDelete = messageElement.dataset.canDelete === '1';
         if (contextEditItem) {
-            contextEditItem.hidden = !canEdit;
+            contextEditItem.hidden = false;
+            contextEditItem.disabled = !canEdit;
         }
         if (contextDeleteItem) {
-            contextDeleteItem.hidden = !canDelete;
+            contextDeleteItem.hidden = false;
+            contextDeleteItem.disabled = !canDelete;
         }
 
         contextMenu.hidden = false;
+        contextMenu.style.visibility = 'hidden';
         contextMenu.style.left = '0px';
         contextMenu.style.top = '0px';
 
         const viewportW = window.innerWidth || document.documentElement.clientWidth;
         const viewportH = window.innerHeight || document.documentElement.clientHeight;
         const menuRect = contextMenu.getBoundingClientRect();
+        const bubble = messageElement.querySelector('.message-bubble') || messageElement;
+        const bubbleRect = bubble.getBoundingClientRect();
 
-        let left = Number(x || 0);
-        let top = Number(y || 0);
+        let left = bubbleRect.right - menuRect.width;
+        let top = bubbleRect.top - menuRect.height - 8;
+
+        if (top < 8) {
+            top = bubbleRect.bottom + 8;
+        }
         if (left + menuRect.width > viewportW - 8) {
             left = viewportW - menuRect.width - 8;
         }
@@ -327,6 +314,7 @@ $partnerAvatarUrl = avatarUrl($partner['avatar'] ?? null);
 
         contextMenu.style.left = left + 'px';
         contextMenu.style.top = top + 'px';
+        contextMenu.style.visibility = 'visible';
     }
 
     function setEditMode(messageElement) {
@@ -470,23 +458,26 @@ $partnerAvatarUrl = avatarUrl($partner['avatar'] ?? null);
         if (!messageElement) {
             return;
         }
+        if (messageElement.dataset.own !== '1' || messageElement.dataset.system === '1' || messageElement.dataset.isDeleted === '1') {
+            closeContextMenu();
+            return;
+        }
         event.preventDefault();
         closeContextMenu();
-        openContextMenuForMessage(messageElement, event.clientX, event.clientY);
+        openContextMenuForMessage(messageElement);
     });
 
     messagesContainer.addEventListener('touchstart', function (event) {
         const messageElement = event.target.closest('.message[data-id]');
-        if (!messageElement || messageElement.dataset.system === '1') {
+        if (!messageElement || messageElement.dataset.system === '1' || messageElement.dataset.own !== '1' || messageElement.dataset.isDeleted === '1') {
             return;
         }
         if (!event.touches || event.touches.length === 0) {
             return;
         }
 
-        const touch = event.touches[0];
         longPressTimer = window.setTimeout(function () {
-            openContextMenuForMessage(messageElement, touch.clientX, touch.clientY);
+            openContextMenuForMessage(messageElement);
         }, 520);
     }, { passive: true });
 

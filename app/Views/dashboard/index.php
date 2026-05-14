@@ -32,13 +32,13 @@
                 </div>
                 <p class="decision-reason"><?= h($decision['decision_reason_display']) ?></p>
                 <p class="decision-meta">
-                    SAW: <strong><?= number_format((float) ($saw['score'] ?? 0), 2) ?>%</strong>
+                    Simple Additive Weighting: <strong><?= number_format((float) ($saw['score'] ?? 0), 2) ?>%</strong>
                     <?php if (!empty($saw['rank']) && !empty($saw['total_candidates'])): ?>
                     | Ranking #<?= (int) $saw['rank'] ?> dari <?= (int) $saw['total_candidates'] ?> kandidat
                     <?php endif; ?>
                 </p>
                 <p class="decision-breakdown">
-                    Ringkas SAW: Skill <?= number_format((float) ($components['skill'] ?? 0), 1) ?>,
+                    Kriteria Penilaian: Skill <?= number_format((float) ($components['skill'] ?? 0), 1) ?>,
                     Pendidikan <?= number_format((float) ($components['education'] ?? 0), 1) ?>,
                     Pengalaman <?= number_format((float) ($components['experience'] ?? 0), 1) ?>,
                     Aktivitas CV <?= number_format((float) ($components['activity'] ?? 0), 1) ?>.

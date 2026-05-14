@@ -26,6 +26,10 @@ class Applications extends Controller {
             $this->hrd();
             return;
         }
+
+        if (hasRole('admin')) {
+            redirect('jobs/manage');
+        }
         
         $user_id = $_SESSION['user_id'];
         
@@ -87,7 +91,7 @@ class Applications extends Controller {
         }
         
         // Cek akses
-        if (!hasRole('hrd') && !hasRole('admin') && $application['user_id'] != $_SESSION['user_id']) {
+        if (!hasRole('hrd') && $application['user_id'] != $_SESSION['user_id']) {
             setFlash('error', 'Anda tidak memiliki akses ke lamaran ini');
             redirect('applications');
         }
@@ -96,7 +100,7 @@ class Applications extends Controller {
         $candidate = null;
         $application_saw = null;
         $job_saw_recommendation = null;
-        if (hasRole('hrd') || hasRole('admin') || $application['user_id'] == $_SESSION['user_id']) {
+        if (hasRole('hrd') || $application['user_id'] == $_SESSION['user_id']) {
             $candidate = db()->row("SELECT * FROM users WHERE user_id = ?", [$application['user_id']]);
         }
 
@@ -538,7 +542,7 @@ class Applications extends Controller {
             redirect('applications/detail/' . $application_id);
         }
 
-        if (!hasRole('hrd') && !hasRole('admin') && (int) $application['user_id'] !== (int) $_SESSION['user_id']) {
+        if (!hasRole('hrd') && (int) $application['user_id'] !== (int) $_SESSION['user_id']) {
             setFlash('error', 'Akses ditolak');
             redirect('applications');
         }

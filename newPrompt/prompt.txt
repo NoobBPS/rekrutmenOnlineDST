@@ -8,3 +8,12 @@ seperti fixed position)..
 5. lihat gambar login page (tampilan mobile).. ubah tombol menu jadi tombol dengan simbol hamburger.. lalu Ubah kata "Masuk ke DST Recruitment" di container login di tengah jadi "Login".. hilangkan footer di tampilan mobile..
 
 tiru 5 perintah di atas berdasarkan gambar yang dikirim
+
+1. perbaiki seluruh error / warning yang ada di tab problems pada menu terminal di kanan (total 55)
+2. uNTUK role akun saran dosen ada 3, yaitu HRD, User, dan Admin dengan pembagian tugas berikut
+Admin: Hanya admin yang bisa menambah, edit, maupun hapus lowongan pekerjaan yang ada (di halaman kelola lowongan), dengan kata lain akun user dan HRD tidak ada halaman "kelola lowongan"
+User: Bisa melihat lowongan yang tersedia dan melamarnya (ini sudah benar, tidak perlu banyak diubah untuk role user)
+HRD: Bisa menerima (approve) / menolak (rejected) lamaran dari para kandidat
+3. Ubah warna tulisan penolakan kandidat di halaman user menjadi warna putih dengan background merah agar terlihat kontras
+4. tolong buatkan juga untuk isi dari manual booknya (panduan penggunaan aplikasi)
+5. Terakhir bantu saya kodingan PHP metode Simple Addictive Weighting ini dengan memberikan penjelasan tambahan mungkin melalui file .txt nanti yang kau buat

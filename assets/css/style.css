@@ -441,9 +441,9 @@ a {
 }
 
 .alert-error {
-  background: #fcecee;
-  border: 1px solid #f7ccd2;
-  color: #8f1d33;
+  background: var(--danger);
+  border: 1px solid var(--danger);
+  color: #fff;
 }
 
 .alert-warning {
@@ -859,8 +859,8 @@ small {
 }
 
 .badge-danger {
-  color: #8f1d33;
-  background: #f9dbe1;
+  color: #fff;
+  background: var(--danger);
 }
 
 .badge-secondary {
@@ -913,6 +913,12 @@ small {
 
 .decision-rejected {
   border-left: 4px solid var(--danger);
+}
+
+.decision-rejected .decision-reason,
+.decision-rejected .decision-meta,
+.decision-rejected .decision-breakdown {
+  color: var(--ink);
 }
 
 .decision-head {
@@ -1228,6 +1234,10 @@ small {
   gap: 4px;
 }
 
+.chat-context-menu[hidden] {
+  display: none;
+}
+
 .chat-context-item {
   width: 100%;
   text-align: left;
@@ -1240,8 +1250,17 @@ small {
   cursor: pointer;
 }
 
+.chat-context-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .chat-context-item:hover {
   background: #f4f7f6;
+}
+
+.chat-context-item:disabled:hover {
+  background: transparent;
 }
 
 .chat-context-item-danger {

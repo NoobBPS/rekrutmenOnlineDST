@@ -1,0 +1,78 @@
+MANUAL BOOK APLIKASI DST RECRUITMENT
+PT Digdaya Solusi Teknologi
+
+1. Tujuan Aplikasi
+Aplikasi DST Recruitment digunakan untuk mengelola proses rekrutmen calon pegawai mulai dari pendaftaran kandidat, publikasi lowongan, pengiriman lamaran, seleksi kandidat oleh HRD, hingga penyampaian hasil diterima atau ditolak kepada kandidat.
+
+2. Role Pengguna
+Aplikasi memiliki 3 role utama:
+
+a. User atau Kandidat
+User dapat mendaftar akun, melengkapi profil, melihat lowongan pekerjaan yang tersedia, melamar lowongan, mengunggah CV, memantau status lamaran, melihat alasan hasil seleksi, dan melakukan chat jika proses komunikasi sudah dibuka.
+
+b. HRD
+HRD dapat melihat daftar pelamar, memfilter pelamar berdasarkan status, posisi, skill, dan pendidikan, melihat detail kandidat, melihat ranking Simple Additive Weighting (SAW), memberikan catatan, serta menerima atau menolak lamaran kandidat.
+
+c. Admin
+Admin bertugas mengelola lowongan pekerjaan. Admin dapat menambah, mengedit, menghapus, membuka, dan menutup lowongan. Menu Kelola Lowongan hanya tersedia untuk Admin.
+
+3. Cara Login
+1. Buka aplikasi melalui browser.
+2. Pilih menu Login.
+3. Masukkan email dan password.
+4. Klik tombol Masuk.
+5. Sistem akan mengarahkan pengguna sesuai role masing-masing.
+
+Akun default:
+HRD: hrd@dst.co.id
+Admin: admin@dst.co.id
+Password: password123
+
+4. Panduan User atau Kandidat
+1. Registrasi Akun
+   Kandidat membuka halaman Daftar, mengisi nama lengkap, email, password, dan konfirmasi password, lalu menekan tombol Daftar.
+
+2. Melengkapi Profil
+   Setelah registrasi, kandidat diarahkan ke halaman profil. Kandidat sebaiknya mengisi data pendidikan, skill, pengalaman, bio, dan informasi pendukung lainnya agar penilaian lamaran lebih akurat.
+
+3. Melihat Lowongan
+   Kandidat memilih menu Lowongan untuk melihat daftar pekerjaan aktif. Kandidat dapat membuka detail lowongan untuk membaca deskripsi, requirements, lokasi, tipe pekerjaan, dan skill yang dibutuhkan.
+
+4. Melamar Lowongan
+   Kandidat membuka detail lowongan, menekan tombol Lamar, mengunggah CV, mengisi cover letter jika diperlukan, lalu mengirim lamaran.
+
+5. Memantau Lamaran
+   Kandidat membuka menu Lamaran Saya untuk melihat status lamaran. Status yang tersedia adalah Baru, Screening, Interview, Diterima, dan Ditolak.
+
+6. Melihat Hasil Seleksi
+   Jika lamaran diterima atau ditolak, kandidat dapat melihat alasan keputusan HRD dan ringkasan nilai SAW pada dashboard atau halaman detail lamaran.
+
+5. Panduan HRD
+1. Login sebagai HRD.
+2. Buka menu Pelamar.
+3. Gunakan filter status, posisi, skill, atau pendidikan jika diperlukan.
+4. Buka detail pelamar untuk melihat profil, CV, cover letter, skill match, skor SAW, ranking SAW, dan riwayat catatan.
+5. Pada bagian Update Status, pilih status lamaran.
+6. Jika memilih Diterima atau Ditolak, isi alasan keputusan.
+7. Klik Update untuk menyimpan keputusan.
+8. HRD dapat menggunakan rekomendasi SAW sebagai bantuan memilih kandidat terbaik, tetapi keputusan akhir tetap dapat disesuaikan secara manual.
+
+6. Panduan Admin
+1. Login sebagai Admin.
+2. Buka menu Kelola Lowongan.
+3. Klik Tambah Lowongan untuk membuat lowongan baru.
+4. Isi posisi, departemen, lokasi, tipe pekerjaan, gaji, deskripsi, requirements, dan skill.
+5. Klik Simpan.
+6. Gunakan tombol Edit untuk mengubah data lowongan.
+7. Gunakan tombol Tutup atau Buka untuk mengubah status lowongan.
+8. Gunakan tombol Hapus jika lowongan perlu dihapus.
+
+7. Alur Status Lamaran
+Baru: Lamaran baru masuk dan belum diproses.
+Screening: Lamaran sedang diseleksi awal oleh HRD.
+Interview: Kandidat masuk tahap wawancara.
+Diterima: Kandidat diterima untuk posisi yang dilamar.
+Ditolak: Kandidat belum diterima untuk posisi yang dilamar.
+
+8. Catatan Penggunaan
+Pastikan data profil kandidat diisi dengan lengkap karena data skill, pendidikan, pengalaman, bio, dan cover letter dipakai sebagai bagian dari perhitungan SAW. Untuk keamanan, jangan membagikan password kepada pengguna lain.

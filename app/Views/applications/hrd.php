@@ -3,7 +3,6 @@
         <h1>Daftar Pelamar</h1>
         <p>Pilih kandidat terbaik dan lanjutkan proses interview.</p>
     </div>
-    <a href="<?= BASE_URL ?>jobs/manage" class="btn btn-secondary">Kelola Lowongan</a>
 </div>
 
 <div class="stats-grid compact">

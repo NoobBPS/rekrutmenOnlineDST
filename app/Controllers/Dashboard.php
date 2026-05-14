@@ -17,7 +17,11 @@ class Dashboard extends Controller {
             redirect('auth/login');
         }
         
-        if (hasRole('hrd') || hasRole('admin')) {
+        if (hasRole('admin')) {
+            redirect('jobs/manage');
+        }
+
+        if (hasRole('hrd')) {
             $this->hrd();
             return;
         }

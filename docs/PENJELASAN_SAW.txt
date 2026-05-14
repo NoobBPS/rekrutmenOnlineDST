@@ -1,0 +1,141 @@
+PENJELASAN METODE SIMPLE ADDITIVE WEIGHTING (SAW)
+
+Catatan istilah:
+Nama metode yang umum digunakan adalah Simple Additive Weighting, bukan Simple Addictive Weighting.
+
+1. Tujuan SAW pada Aplikasi
+Metode SAW digunakan untuk membantu HRD menentukan kandidat terbaik berdasarkan beberapa kriteria penilaian. Pada aplikasi DST Recruitment, SAW tidak menggantikan keputusan HRD, tetapi menjadi rekomendasi objektif berdasarkan data kandidat dan kebutuhan lowongan.
+
+2. Kriteria dan Bobot
+Aplikasi menggunakan 4 kriteria:
+
+Skill: 40 persen
+Pendidikan: 20 persen
+Pengalaman: 25 persen
+Aktivitas CV: 15 persen
+
+Total bobot harus bernilai 1 atau 100 persen.
+
+3. Rumus SAW
+Nilai akhir kandidat dihitung dengan rumus:
+
+Vi = (R1 x W1) + (R2 x W2) + (R3 x W3) + (R4 x W4)
+
+Keterangan:
+Vi = nilai akhir kandidat
+R = nilai kriteria yang sudah dinormalisasi
+W = bobot kriteria
+
+Karena semua kriteria termasuk benefit, normalisasi memakai rumus:
+
+Rij = Xij / Max(Xj)
+
+Keterangan:
+Rij = nilai normalisasi kandidat ke-i pada kriteria ke-j
+Xij = nilai asli kandidat ke-i pada kriteria ke-j
+Max(Xj) = nilai tertinggi pada kriteria tersebut
+
+4. Alur Perhitungan
+1. Ambil semua pelamar pada satu lowongan.
+2. Hitung nilai mentah setiap kandidat untuk skill, pendidikan, pengalaman, dan aktivitas CV.
+3. Cari nilai maksimum setiap kriteria.
+4. Normalisasi nilai kandidat dengan membagi nilai kandidat dengan nilai maksimum.
+5. Kalikan hasil normalisasi dengan bobot masing-masing kriteria.
+6. Jumlahkan semua hasil perkalian.
+7. Urutkan kandidat dari nilai SAW tertinggi ke terendah.
+
+5. Contoh Kode PHP Sederhana
+
+<?php
+$weights = [
+    'skill' => 0.40,
+    'education' => 0.20,
+    'experience' => 0.25,
+    'activity' => 0.15
+];
+
+$candidates = [
+    [
+        'name' => 'Andi',
+        'skill' => 80,
+        'education' => 90,
+        'experience' => 70,
+        'activity' => 75
+    ],
+    [
+        'name' => 'Budi',
+        'skill' => 95,
+        'education' => 80,
+        'experience' => 60,
+        'activity' => 85
+    ],
+    [
+        'name' => 'Citra',
+        'skill' => 70,
+        'education' => 85,
+        'experience' => 90,
+        'activity' => 80
+    ]
+];
+
+$maxValues = [
+    'skill' => 0,
+    'education' => 0,
+    'experience' => 0,
+    'activity' => 0
+];
+
+foreach ($candidates as $candidate) {
+    foreach ($maxValues as $criterion => $maxValue) {
+        $maxValues[$criterion] = max($maxValues[$criterion], $candidate[$criterion]);
+    }
+}
+
+foreach ($candidates as &$candidate) {
+    $score = 0;
+
+    foreach ($weights as $criterion => $weight) {
+        $normalized = $maxValues[$criterion] > 0
+            ? $candidate[$criterion] / $maxValues[$criterion]
+            : 0;
+
+        $candidate['normalized'][$criterion] = round($normalized, 4);
+        $score += $normalized * $weight;
+    }
+
+    $candidate['saw_score'] = round($score * 100, 2);
+}
+unset($candidate);
+
+usort($candidates, function ($left, $right) {
+    return $right['saw_score'] <=> $left['saw_score'];
+});
+
+foreach ($candidates as $index => $candidate) {
+    echo 'Rank ' . ($index + 1) . ': ' . $candidate['name'] . ' - ' . $candidate['saw_score'] . "%\n";
+}
+?>
+
+6. Implementasi pada Project
+Kode SAW aplikasi berada di app/Controllers/Applications.php. Fungsi pentingnya adalah:
+
+buildSawRankings()
+Mengelompokkan pelamar berdasarkan lowongan, menghitung nilai SAW, menentukan ranking, dan memilih kandidat rekomendasi.
+
+calculateSawCriteria()
+Menghitung nilai mentah untuk skill, pendidikan, pengalaman, dan aktivitas CV.
+
+calculateSkillScore()
+Menghitung kecocokan skill kandidat dengan skill lowongan.
+
+calculateEducationScore()
+Menghitung kecocokan tingkat pendidikan kandidat dengan kebutuhan lowongan.
+
+calculateExperienceScore()
+Menghitung kecocokan pengalaman berdasarkan tahun pengalaman dan bukti pengalaman dari bio atau cover letter.
+
+calculateActivityScore()
+Menghitung aktivitas tambahan seperti magang, organisasi, proyek, sertifikat, kompetisi, volunteer, dan pengalaman kepemimpinan.
+
+7. Kesimpulan
+Metode SAW cocok digunakan pada sistem rekrutmen karena dapat menggabungkan beberapa kriteria menjadi satu skor akhir. Dengan begitu, HRD dapat melihat kandidat paling sesuai secara lebih cepat dan konsisten.

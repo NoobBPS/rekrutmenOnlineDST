@@ -14,7 +14,11 @@ class Auth extends Controller {
      */
     public function login() {
         if (isLoggedIn()) {
-            if (hasRole('hrd') || hasRole('admin')) {
+            if (hasRole('admin')) {
+                redirect('jobs/manage');
+            }
+
+            if (hasRole('hrd')) {
                 redirect('dashboard/hrd');
             }
 
@@ -96,7 +100,11 @@ class Auth extends Controller {
         
         setFlash('success', 'Selamat datang, ' . $user['full_name'] . '!');
 
-        if (($user['role'] ?? '') === 'hrd' || ($user['role'] ?? '') === 'admin') {
+        if (($user['role'] ?? '') === 'admin') {
+            redirect('jobs/manage');
+        }
+
+        if (($user['role'] ?? '') === 'hrd') {
             redirect('dashboard/hrd');
         }
 
