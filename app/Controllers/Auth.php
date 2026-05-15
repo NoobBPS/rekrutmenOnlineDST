@@ -149,7 +149,7 @@ class Auth extends Controller {
         
         // Cek email sudah terdaftar
         $existing = db()->row(
-            "SELECT id FROM users WHERE email = ?",
+            "SELECT 1 FROM users WHERE email = ? LIMIT 1",
             [$email]
         );
         
