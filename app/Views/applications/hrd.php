@@ -7,7 +7,7 @@
 
 <div class="stats-grid compact">
     <div class="stat-card"><div class="stat-value"><?= (int) $stats['all'] ?></div><div class="stat-label">Total</div></div>
-    <div class="stat-card"><div class="stat-value"><?= (int) $stats['pending'] ?></div><div class="stat-label">Baru</div></div>
+    <div class="stat-card"><div class="stat-value"><?= (int) $stats['pending'] ?></div><div class="stat-label">Lamaran Baru</div></div>
     <div class="stat-card"><div class="stat-value"><?= (int) $stats['screening'] ?></div><div class="stat-label">Screening</div></div>
     <div class="stat-card"><div class="stat-value"><?= (int) $stats['interview'] ?></div><div class="stat-label">Interview</div></div>
     <div class="stat-card stat-success"><div class="stat-value"><?= (int) $stats['accepted'] ?></div><div class="stat-label">Diterima</div></div>
@@ -18,7 +18,7 @@
     <div class="search-row">
         <select name="status">
             <option value="">Semua Status</option>
-            <option value="pending" <?= $filter_status === 'pending' ? 'selected' : '' ?>>Baru</option>
+            <option value="pending" <?= $filter_status === 'pending' ? 'selected' : '' ?>>Lamaran Baru</option>
             <option value="screening" <?= $filter_status === 'screening' ? 'selected' : '' ?>>Screening</option>
             <option value="interview" <?= $filter_status === 'interview' ? 'selected' : '' ?>>Interview</option>
             <option value="accepted" <?= $filter_status === 'accepted' ? 'selected' : '' ?>>Diterima</option>

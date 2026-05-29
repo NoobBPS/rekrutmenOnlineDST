@@ -233,7 +233,7 @@ function formatDate($date) {
 
 function statusLabel($status) {
     $labels = [
-        'pending' => '<span class="badge badge-warning">Baru</span>',
+        'pending' => '<span class="badge badge-warning">Lamaran Baru</span>',
         'screening' => '<span class="badge badge-info">Screening</span>',
         'interview' => '<span class="badge badge-primary">Interview</span>',
         'accepted' => '<span class="badge badge-success">Diterima</span>',

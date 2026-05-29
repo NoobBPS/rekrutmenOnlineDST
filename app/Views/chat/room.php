@@ -28,16 +28,22 @@ if ($isStaffViewer) {
     $chatStatusLabel = (string) ($applicationContext['status_label'] ?? ($staffLabels[$statusKey] ?? 'Status Lamaran'));
     $chatStatusVariant = $staffVariants[$statusKey] ?? 'info';
 } else {
-    if ($statusKey === 'rejected') {
-        $chatStatusLabel = 'Belum Sesuai';
-        $chatStatusVariant = 'neutral';
-    } elseif ($statusKey === 'accepted') {
-        $chatStatusLabel = 'Terhubung dengan HRD';
-        $chatStatusVariant = 'success';
-    } elseif (in_array($statusKey, ['pending', 'screening', 'interview'], true)) {
-        $chatStatusLabel = 'Telah Melamar / Chat Dimulai';
-        $chatStatusVariant = 'info';
-    }
+    $candidateLabels = [
+        'pending' => 'Lamaran Baru',
+        'screening' => 'Screening',
+        'interview' => 'Interview',
+        'accepted' => 'Diterima',
+        'rejected' => 'Ditolak'
+    ];
+    $candidateVariants = [
+        'pending' => 'info',
+        'screening' => 'info',
+        'interview' => 'primary',
+        'accepted' => 'success',
+        'rejected' => 'neutral'
+    ];
+    $chatStatusLabel = (string) ($candidateLabels[$statusKey] ?? 'Chat Dimulai');
+    $chatStatusVariant = $candidateVariants[$statusKey] ?? 'info';
 }
 $applicationLine = trim((string) ($applicationContext['job_title'] ?? ''));
 ?>

@@ -532,9 +532,6 @@ class Applications extends \Controller {
 
     /**
      * Download CV (authorized)
-     */
-    /**
-     * Download CV (authorized)
      *
      * @param int|string $application_id Application id
      * @return void
@@ -682,9 +679,6 @@ class Applications extends \Controller {
         return json_decode((string) $this->buildDecisionSawSummary($applicationSaw), true);
     }
 
-    /**
-     * Build SAW ranking per posisi (job_id)
-     */
     /**
      * Build SAW ranking per posisi (job_id)
      *
@@ -890,9 +884,6 @@ class Applications extends \Controller {
         ];
     }
 
-    /**
-     * Hitung nilai kriteria SAW per pelamar
-     */
     /**
      * Hitung nilai kriteria SAW per pelamar
      *
@@ -1220,12 +1211,6 @@ class Applications extends \Controller {
      * @param string $cvFile
      * @return string|null
      */
-    /**
-     * Resolve CV filename to an absolute path on disk
-     *
-     * @param string $cvFile
-     * @return string|null
-     */
     private function resolveCvPath($cvFile) {
         $filename = basename((string) $cvFile);
         if ($filename === '') {
@@ -1331,12 +1316,6 @@ class Applications extends \Controller {
     /**
      * Decode escaped PDF literal string contents into plain text
      *
-     * @param string $text
-     * @return string
-     */
-    /**
-     * Decode escaped PDF literal string contents into plain text
-     *
      * @param string $text Raw literal string from PDF content stream
      * @return string Decoded plain text
      */
@@ -1381,7 +1360,7 @@ class Applications extends \Controller {
         return min(100.0, ($matched / $divider) * 100.0);
     }
 
-    private function extractRequiredYears($text) {
+    private function extractRequiredYears(string $text): int {
         $text = $this->normalizeText((string) $text);
         preg_match_all('/(\d+)\s*(\+)?\s*(tahun|year|years|yr)/i', $text, $matches);
 
@@ -1393,7 +1372,7 @@ class Applications extends \Controller {
         return max($years);
     }
 
-    private function detectCandidateEducationLevel($text) {
+    private function detectCandidateEducationLevel(string $text): int {
         $text = $this->normalizeText((string) $text);
 
         $patterns = [
@@ -1414,7 +1393,7 @@ class Applications extends \Controller {
         return 0;
     }
 
-    private function detectRequiredEducationLevel($text) {
+    private function detectRequiredEducationLevel(string $text): int {
         $text = $this->normalizeText((string) $text);
         $levels = [];
 

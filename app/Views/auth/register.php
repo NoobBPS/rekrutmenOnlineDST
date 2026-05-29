@@ -1,5 +1,8 @@
 <div class="auth-container">
     <div class="auth-card">
+        <div class="auth-logo">
+            <img src="<?= BASE_URL ?>assets/images/logoDST.png" alt="Logo DST">
+        </div>
         <h2>Daftar Akun Baru</h2>
         <form action="<?= BASE_URL ?>auth/doRegister" method="POST">
             <?= csrfField() ?>

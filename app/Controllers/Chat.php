@@ -582,11 +582,11 @@ class Chat extends Controller {
         }
 
         $candidateMap = [
-            'pending' => ['label' => 'Telah Melamar / Chat Dimulai', 'variant' => 'info'],
-            'screening' => ['label' => 'Telah Melamar / Chat Dimulai', 'variant' => 'info'],
-            'interview' => ['label' => 'Terhubung dengan HRD', 'variant' => 'info'],
-            'accepted' => ['label' => 'Terhubung dengan HRD', 'variant' => 'success'],
-            'rejected' => ['label' => 'Belum Sesuai', 'variant' => 'neutral']
+            'pending' => ['label' => 'Lamaran Baru', 'variant' => 'info'],
+            'screening' => ['label' => 'Screening', 'variant' => 'info'],
+            'interview' => ['label' => 'Interview', 'variant' => 'primary'],
+            'accepted' => ['label' => 'Diterima', 'variant' => 'success'],
+            'rejected' => ['label' => 'Ditolak', 'variant' => 'neutral']
         ];
 
         $meta = $candidateMap[$statusKey] ?? ['label' => 'Chat Dimulai', 'variant' => 'info'];

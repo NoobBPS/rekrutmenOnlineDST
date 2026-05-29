@@ -33,17 +33,30 @@ date_default_timezone_set('Asia/Jakarta');
 
 $isSecure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
 session_name('dst_session');
+
+// Use a long cookie lifetime (30 days) so the session cookie survives browser
+// restarts and tab switches.  The value 0 makes the cookie expire when the
+// browser closes which causes the "auto-logout" behaviour reported by users.
+$cookieLifetime = 30 * 24 * 60 * 60; // 30 days
 session_set_cookie_params([
-    'lifetime' => 0,
+    'lifetime' => $cookieLifetime,
     'path' => '/',
     'secure' => $isSecure,
     'httponly' => true,
     'samesite' => 'Lax',
 ]);
 
+// Increase the server-side session garbage collection max-lifetime so that
+// sessions are not prematurely cleaned up while the user is still active.
+ini_set('session.gc_maxlifetime', (string) $cookieLifetime);
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
+// Keep the session alive on each page load / AJAX request so that long-lived
+// tabs do not expire the session unexpectedly.
+$_SESSION['last_activity'] = time();
 
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
