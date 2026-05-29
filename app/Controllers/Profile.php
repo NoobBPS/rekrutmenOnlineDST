@@ -3,7 +3,7 @@
  * Profile Controller - DST Recruitment System
  */
 
-class Profile extends Controller {
+class Profile extends \Controller {
     
     public function __construct() {
         parent::__construct();
@@ -187,7 +187,13 @@ class Profile extends Controller {
             setFlash('error', 'Password saat ini salah');
             redirect('profile/password');
         }
-        
+
+        // New password must differ from current password
+        if (verifyPassword($new_password, $user['password'])) {
+            setFlash('error', 'Password baru harus berbeda dari password saat ini');
+            redirect('profile/password');
+        }
+
         if (strlen($new_password) < 6) {
             setFlash('error', 'Password baru minimal 6 karakter');
             redirect('profile/password');
@@ -197,7 +203,7 @@ class Profile extends Controller {
             setFlash('error', 'Password baru tidak cocok');
             redirect('profile/password');
         }
-        
+
         db()->execute(
             "UPDATE users SET password = ? WHERE user_id = ?",
             [hashPassword($new_password), $_SESSION['user_id']]

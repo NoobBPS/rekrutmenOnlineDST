@@ -1,53 +1,9 @@
 <div class="dashboard-container">
     <h1>Dashboard Kandidat</h1>
     <p>Selamat datang, <strong><?= h($user['full_name']) ?></strong>.</p>
-
-    <?php if (!empty($accepted_job)): ?>
-    <div class="alert alert-success">
-        <strong>Selamat anda diterima oleh perusahaan DST</strong> dengan posisi <strong><?= h($accepted_job['job_title']) ?></strong>.
+    <div class="alert alert-info">
+        Status lamaran kini ditampilkan di menu <strong>Chat</strong> pada setiap percakapan dengan HRD.
     </div>
-    <?php endif; ?>
-
-    <?php if (!empty($rejected_job)): ?>
-    <div class="alert alert-error">
-        <strong>Maaf, anda kurang cocok di posisi ini</strong>: <?= h($rejected_job['job_title']) ?>.
-    </div>
-    <?php endif; ?>
-
-    <?php if (!empty($final_decisions)): ?>
-    <section class="dashboard-section">
-        <h2>Alasan Hasil Seleksi</h2>
-        <div class="decision-grid">
-            <?php foreach ($final_decisions as $decision): ?>
-            <?php
-                $saw = $decision['decision_saw_display'] ?? [];
-                $components = $saw['components'] ?? [];
-            ?>
-            <article class="decision-card <?= $decision['status'] === 'accepted' ? 'decision-accepted' : 'decision-rejected' ?>">
-                <div class="decision-head">
-                    <h3><?= h($decision['job_title']) ?></h3>
-                    <span class="badge <?= $decision['status'] === 'accepted' ? 'badge-success' : 'badge-danger' ?>">
-                        <?= $decision['status'] === 'accepted' ? 'Diterima' : 'Ditolak' ?>
-                    </span>
-                </div>
-                <p class="decision-reason"><?= h($decision['decision_reason_display']) ?></p>
-                <p class="decision-meta">
-                    Simple Additive Weighting: <strong><?= number_format((float) ($saw['score'] ?? 0), 2) ?>%</strong>
-                    <?php if (!empty($saw['rank']) && !empty($saw['total_candidates'])): ?>
-                    | Ranking #<?= (int) $saw['rank'] ?> dari <?= (int) $saw['total_candidates'] ?> kandidat
-                    <?php endif; ?>
-                </p>
-                <p class="decision-breakdown">
-                    Kriteria Penilaian: Skill <?= number_format((float) ($components['skill'] ?? 0), 1) ?>,
-                    Pendidikan <?= number_format((float) ($components['education'] ?? 0), 1) ?>,
-                    Pengalaman <?= number_format((float) ($components['experience'] ?? 0), 1) ?>,
-                    Aktivitas CV <?= number_format((float) ($components['activity'] ?? 0), 1) ?>.
-                </p>
-            </article>
-            <?php endforeach; ?>
-        </div>
-    </section>
-    <?php endif; ?>
 
     <div class="stats-grid">
         <div class="stat-card">

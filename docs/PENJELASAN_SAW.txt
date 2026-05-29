@@ -1,4 +1,4 @@
-PENJELASAN METODE SIMPLE ADDITIVE WEIGHTING (SAW)
+PENJELASAN METODE SIMPLE ADDITIVE WEIGHTING
 
 Catatan istilah:
 Nama metode yang umum digunakan adalah Simple Additive Weighting, bukan Simple Addictive Weighting.

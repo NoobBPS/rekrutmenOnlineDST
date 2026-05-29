@@ -5,6 +5,41 @@ $applicationContext = isset($application_context) && is_array($application_conte
 $partnerAvatarUrl = avatarUrl($partner['avatar'] ?? null);
 $lastMessage = !empty($messages) ? end($messages) : null;
 $lastMessageId = is_array($lastMessage) ? (int) ($lastMessage['id'] ?? 0) : 0;
+$statusKey = (string) ($applicationContext['status_key'] ?? '');
+$isStaffViewer = hasRole('hrd') || hasRole('admin');
+$chatStatusLabel = 'Terhubung dengan HRD';
+$chatStatusVariant = 'info';
+
+if ($isStaffViewer) {
+    $staffLabels = [
+        'pending' => 'Lamaran Baru',
+        'screening' => 'Screening',
+        'interview' => 'Interview',
+        'accepted' => 'Diterima',
+        'rejected' => 'Ditolak'
+    ];
+    $staffVariants = [
+        'pending' => 'info',
+        'screening' => 'info',
+        'interview' => 'primary',
+        'accepted' => 'success',
+        'rejected' => 'neutral'
+    ];
+    $chatStatusLabel = (string) ($applicationContext['status_label'] ?? ($staffLabels[$statusKey] ?? 'Status Lamaran'));
+    $chatStatusVariant = $staffVariants[$statusKey] ?? 'info';
+} else {
+    if ($statusKey === 'rejected') {
+        $chatStatusLabel = 'Belum Sesuai';
+        $chatStatusVariant = 'neutral';
+    } elseif ($statusKey === 'accepted') {
+        $chatStatusLabel = 'Terhubung dengan HRD';
+        $chatStatusVariant = 'success';
+    } elseif (in_array($statusKey, ['pending', 'screening', 'interview'], true)) {
+        $chatStatusLabel = 'Telah Melamar / Chat Dimulai';
+        $chatStatusVariant = 'info';
+    }
+}
+$applicationLine = trim((string) ($applicationContext['job_title'] ?? ''));
 ?>
 <div class="chat-room">
     <div class="chat-header">
@@ -18,7 +53,12 @@ $lastMessageId = is_array($lastMessage) ? (int) ($lastMessage['id'] ?? 0) : 0;
         </div>
         <div class="chat-user">
             <strong><?= h($partner['full_name']) ?></strong>
+            <span class="chat-status-badge chat-status-<?= h($chatStatusVariant) ?>"><?= h($chatStatusLabel) ?></span>
+            <?php if ($applicationLine !== ''): ?>
+            <span class="user-role">Melamar posisi: <?= h($applicationLine) ?></span>
+            <?php else: ?>
             <span class="user-role"><?= in_array(($partner['role'] ?? ''), ['hrd', 'admin'], true) ? 'HRD' : 'Kandidat' ?></span>
+            <?php endif; ?>
         </div>
     </div>
 

@@ -24,13 +24,27 @@
             </div>
             <div class="conv-content">
                 <div class="conv-header">
-                    <strong><?= h($conv['partner_name']) ?></strong>
-                    <?php if ((int) $conv['unread'] > 0): ?>
-                    <span class="unread-badge"><?= (int) $conv['unread'] ?></span>
-                    <?php endif; ?>
+                    <div class="conv-header-main">
+                        <div class="conv-name-stack">
+                            <strong><?= h($conv['partner_name']) ?></strong>
+                            <?php if (!empty($conv['chat_status_label'])): ?>
+                            <span class="chat-status-badge chat-status-<?= h($conv['chat_status_variant'] ?? 'info') ?>">
+                                <?= h($conv['chat_status_label']) ?>
+                            </span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <div class="conv-meta-end">
+                        <span class="conv-time"><?= timeAgo($conv['last_time'] ?? '') ?></span>
+                        <?php if ((int) $conv['unread'] > 0): ?>
+                        <span class="unread-badge"><?= (int) $conv['unread'] ?></span>
+                        <?php endif; ?>
+                    </div>
                 </div>
+                <?php if (!empty($conv['chat_status_detail'])): ?>
+                <p class="conv-application"><?= h($conv['chat_status_detail']) ?></p>
+                <?php endif; ?>
                 <p class="conv-preview"><?= h($conv['last_message'] ?? 'Belum ada pesan') ?></p>
-                <span class="conv-time"><?= timeAgo($conv['last_time'] ?? '') ?></span>
             </div>
         </a>
         <?php endforeach; ?>

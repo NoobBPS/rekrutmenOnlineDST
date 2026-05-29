@@ -3,7 +3,7 @@
  * Applications Controller - DST Recruitment System
  */
 
-class Applications extends Controller {
+class Applications extends \Controller {
 
     private $sawWeights = [
         'skill' => 0.40,
@@ -11,6 +11,7 @@ class Applications extends Controller {
         'experience' => 0.25,
         'activity' => 0.15
     ];
+    private $cvAnalysisCache = [];
     
     public function __construct() {
         parent::__construct();
@@ -71,6 +72,9 @@ class Applications extends Controller {
     
     /**
      * Detail Lamaran
+     *
+     * @param int|string $id Application id (int or numeric string)
+     * @return void
      */
     public function detail($id) {
         $this->requireLogin();
@@ -183,7 +187,7 @@ class Applications extends Controller {
         $applications = db()->select(
             "SELECT a.*, u.full_name as candidate_name, u.email as candidate_email, 
                     u.phone, u.education as candidate_education, u.skills as candidate_skills,
-                    u.experience_years as candidate_experience_years, u.bio as candidate_bio, u.avatar as candidate_avatar, u.cv_file,
+                    u.experience_years as candidate_experience_years, u.bio as candidate_bio, u.avatar as candidate_avatar, u.cv_file as user_cv_file,
                     j.title as job_title, j.location, j.department as job_department, j.skills as job_skills,
                     j.requirements as job_requirements, j.description as job_description
              FROM applications a
@@ -290,7 +294,13 @@ class Applications extends Controller {
         $recommendation = $sawRanking['recommendations'][$job_id] ?? null;
 
         if (!$recommendation || empty($recommendation['application_id'])) {
-            setFlash('warning', 'Belum ada kandidat aktif yang bisa direkomendasikan SAW');
+            setFlash('warning', 'Belum ada kandidat yang lolos validasi CV untuk rekomendasi SAW.');
+            redirect('applications/hrd?job_id=' . $job_id);
+        }
+
+        if (empty($recommendation['can_auto_apply'])) {
+            $reason = trim((string) ($recommendation['reason'] ?? 'Kandidat terbaik sudah berada pada status final.'));
+            setFlash('warning', $reason);
             redirect('applications/hrd?job_id=' . $job_id);
         }
 
@@ -523,6 +533,12 @@ class Applications extends Controller {
     /**
      * Download CV (authorized)
      */
+    /**
+     * Download CV (authorized)
+     *
+     * @param int|string $application_id Application id
+     * @return void
+     */
     public function downloadCv($application_id) {
         $this->requireLogin();
 
@@ -574,6 +590,13 @@ class Applications extends Controller {
         exit;
     }
 
+    /**
+     * Build human-readable reason text for a final decision
+     *
+     * @param array<string,mixed> $application Application row array
+     * @param array<string,mixed>|null $applicationSaw SAW analysis for this application (if available)
+     * @return string
+     */
     private function buildDecisionReasonDisplay($application, $applicationSaw = null) {
         $status = (string) ($application['status'] ?? '');
         if (!in_array($status, ['accepted', 'rejected'], true)) {
@@ -592,6 +615,12 @@ class Applications extends Controller {
         return 'Saat ini kandidat lain memiliki nilai SAW yang lebih tinggi untuk posisi ini.';
     }
 
+    /**
+     * Build a JSON summary payload for SAW decision storage
+     *
+     * @param array<string,mixed>|null $applicationSaw
+     * @return string|null JSON string or null when no SAW data
+     */
     private function buildDecisionSawSummary($applicationSaw) {
         if (empty($applicationSaw)) {
             return null;
@@ -613,6 +642,13 @@ class Applications extends Controller {
         return json_encode($summary);
     }
 
+    /**
+     * Build displayable SAW summary for decision pages
+     *
+     * @param array<string,mixed> $application
+     * @param array<string,mixed>|null $applicationSaw
+     * @return array<string,mixed>|null
+     */
     private function buildDecisionSawDisplay($application, $applicationSaw = null) {
         $status = (string) ($application['status'] ?? '');
         if (!in_array($status, ['accepted', 'rejected'], true)) {
@@ -649,6 +685,12 @@ class Applications extends Controller {
     /**
      * Build SAW ranking per posisi (job_id)
      */
+    /**
+     * Build SAW ranking per posisi (job_id)
+     *
+     * @param array<int,array<string,mixed>> $applications Array of application rows
+     * @return array{applications: array<int,array<string,mixed>>, recommendations: array<int,array<string,mixed>>, by_application_id: array<int,array<string,mixed>>}
+     */
     private function buildSawRankings($applications) {
         if (empty($applications)) {
             return [
@@ -684,6 +726,9 @@ class Applications extends Controller {
 
             foreach ($jobApplications as $application) {
                 $criteria = $this->calculateSawCriteria($application);
+                $cvAnalysis = isset($criteria['cv_analysis']) && is_array($criteria['cv_analysis'])
+                    ? $criteria['cv_analysis']
+                    : [];
 
                 foreach ($maxValues as $criterion => $value) {
                     $maxValues[$criterion] = max($maxValues[$criterion], (float) $criteria[$criterion]);
@@ -692,10 +737,20 @@ class Applications extends Controller {
                 $application['saw_components'] = $criteria;
                 $application['saw_normalized'] = [];
                 $application['saw_score'] = 0;
+                $application['saw_score_base'] = 0;
                 $application['is_saw_recommended'] = false;
                 $application['saw_rank'] = null;
                 $application['saw_total_candidates'] = count($jobApplications);
-                $application['saw_eligible'] = $this->candidateIsEligibleForRecommendation($application['status'] ?? 'pending');
+                $application['saw_cv_quality_factor'] = max(0.15, min((float) ($cvAnalysis['quality_factor'] ?? 1.0), 1.0));
+                $application['saw_cv_job_relevance'] = (float) ($cvAnalysis['job_relevance'] ?? 0);
+                $application['saw_cv_profile_consistency'] = (float) ($cvAnalysis['profile_consistency'] ?? 0);
+                $application['saw_cv_summary'] = (string) ($cvAnalysis['summary'] ?? '');
+                $application['saw_cv_disqualified'] = !empty($cvAnalysis['is_disqualified']);
+                $application['saw_cv_passed'] = empty($application['saw_cv_disqualified']);
+                $application['saw_eligible'] = $this->candidateIsEligibleForRecommendation($application['status'] ?? 'pending')
+                    && !empty($application['saw_cv_passed']);
+                $application['saw_display_eligible'] = $this->candidateCanAppearInRecommendationDisplay($application['status'] ?? 'pending')
+                    && !empty($application['saw_cv_passed']);
 
                 $processed[] = $application;
             }
@@ -712,8 +767,13 @@ class Applications extends Controller {
                     $weighted += $normalizedValue * $weight;
                 }
 
+                $qualityFactor = max(0.15, min((float) ($application['saw_cv_quality_factor'] ?? 1.0), 1.0));
+                if (!empty($application['saw_cv_disqualified'])) {
+                    $qualityFactor = 0.0;
+                }
                 $application['saw_normalized'] = $normalized;
-                $application['saw_score'] = round($weighted * 100, 2);
+                $application['saw_score_base'] = round($weighted * 100, 2);
+                $application['saw_score'] = round($weighted * $qualityFactor * 100, 2);
             }
             unset($application);
 
@@ -735,7 +795,12 @@ class Applications extends Controller {
             unset($application);
 
             $recommended = null;
+            $displayRecommendedIndex = null;
             foreach ($processed as &$application) {
+                if ($displayRecommendedIndex === null && !empty($application['saw_display_eligible'])) {
+                    $displayRecommendedIndex = (int) ($application['id'] ?? 0);
+                }
+
                 if ($recommended === null && !empty($application['saw_eligible'])) {
                     $application['is_saw_recommended'] = true;
                     $recommended = [
@@ -752,17 +817,54 @@ class Applications extends Controller {
             }
             unset($application);
 
-            if ($recommended === null && !empty($processed)) {
-                $fallback = $processed[0];
-                $recommended = [
-                    'job_id' => $jobId,
-                    'job_title' => $fallback['job_title'] ?? '',
-                    'application_id' => null,
-                    'candidate_name' => null,
-                    'candidate_email' => null,
-                    'saw_score' => null,
-                    'rank' => null
-                ];
+            if (!empty($processed)) {
+                if ($displayRecommendedIndex === null) {
+                    foreach ($processed as $candidateRow) {
+                        if (!empty($candidateRow['saw_cv_passed'])) {
+                            $displayRecommendedIndex = (int) ($candidateRow['id'] ?? 0);
+                            break;
+                        }
+                    }
+                }
+
+                if ($displayRecommendedIndex !== null) {
+                    $displayRecommended = $enrichedById[$displayRecommendedIndex] ?? null;
+                    if ($displayRecommended !== null) {
+                        $displayRecommended['is_saw_recommended'] = true;
+                        $enrichedById[$displayRecommendedIndex] = $displayRecommended;
+
+                        $canAutoApply = !empty($displayRecommended['saw_eligible']);
+                        $recommendationReason = null;
+                        if (!$canAutoApply) {
+                            $recommendationReason = 'Kandidat terbaik sudah berada pada status final sehingga rekomendasi otomatis tidak dapat diterapkan.';
+                        }
+
+                        $recommended = [
+                            'job_id' => $jobId,
+                            'job_title' => $displayRecommended['job_title'] ?? '',
+                            'application_id' => (int) ($displayRecommended['id'] ?? 0),
+                            'candidate_name' => $displayRecommended['candidate_name'] ?? '',
+                            'candidate_email' => $displayRecommended['candidate_email'] ?? '',
+                            'saw_score' => (float) ($displayRecommended['saw_score'] ?? 0),
+                            'rank' => (int) ($displayRecommended['saw_rank'] ?? 0),
+                            'can_auto_apply' => $canAutoApply,
+                            'reason' => $recommendationReason
+                        ];
+                    }
+                } else {
+                    $fallback = $processed[0];
+                    $recommended = [
+                        'job_id' => $jobId,
+                        'job_title' => $fallback['job_title'] ?? '',
+                        'application_id' => null,
+                        'candidate_name' => null,
+                        'candidate_email' => null,
+                        'saw_score' => null,
+                        'rank' => null,
+                        'can_auto_apply' => false,
+                        'reason' => 'Belum ada kandidat yang lolos validasi CV untuk rekomendasi otomatis.'
+                    ];
+                }
             }
 
             if ($recommended !== null) {
@@ -791,6 +893,12 @@ class Applications extends Controller {
     /**
      * Hitung nilai kriteria SAW per pelamar
      */
+    /**
+     * Hitung nilai kriteria SAW per pelamar
+     *
+     * @param array<string,mixed> $application Application row with candidate and job info
+     * @return array<string,mixed>
+     */
     private function calculateSawCriteria($application) {
         $candidateSkills = (string) ($application['candidate_skills'] ?? $application['skills'] ?? '');
         $candidateEducation = (string) ($application['candidate_education'] ?? $application['education'] ?? '');
@@ -806,16 +914,55 @@ class Applications extends Controller {
             ($application['job_description'] ?? '')
         );
 
-        $evidenceText = trim($candidateBio . ' ' . $coverLetter);
+        $profileEvidenceText = trim(
+            $candidateSkills . ' ' .
+            $candidateEducation . ' ' .
+            $candidateExperienceYears . ' tahun ' .
+            $candidateBio . ' ' .
+            $coverLetter
+        );
+        $applicationCvFile = trim((string) ($application['cv_file'] ?? ''));
+        if ($applicationCvFile === '') {
+            $applicationCvFile = trim((string) ($application['user_cv_file'] ?? ''));
+        }
+
+        $cvAnalysis = $this->analyzeCvDocument(
+            $applicationCvFile,
+            $jobContext,
+            $jobSkills,
+            $profileEvidenceText
+        );
+        $cvText = (string) ($cvAnalysis['text'] ?? '');
+        $evidenceText = trim($candidateBio . ' ' . $coverLetter . ' ' . $cvText);
+
+        $profileSkillScore = $this->calculateSkillScore($candidateSkills, $jobSkills);
+        $combinedSkillScore = round(
+            ($profileSkillScore * 0.75) + (((float) ($cvAnalysis['job_relevance'] ?? 0.0)) * 0.25),
+            2
+        );
+
+        $activityScore = $this->calculateActivityScore($evidenceText, $jobSkills);
+        $activityScore = round(
+            ($activityScore * 0.65) + (((float) ($cvAnalysis['profile_consistency'] ?? 0.0)) * 0.35),
+            2
+        );
 
         return [
-            'skill' => $this->calculateSkillScore($candidateSkills, $jobSkills),
+            'skill' => $combinedSkillScore,
             'education' => $this->calculateEducationScore($candidateEducation, $jobContext),
             'experience' => $this->calculateExperienceScore($candidateExperienceYears, $jobContext, $evidenceText),
-            'activity' => $this->calculateActivityScore($evidenceText, $jobSkills)
+            'activity' => $activityScore,
+            'cv_analysis' => $cvAnalysis
         ];
     }
 
+    /**
+     * Calculate skill match percentage between candidate skills and job skills
+     *
+     * @param string $candidateSkillsText Candidate skills as CSV/text
+     * @param string $jobSkillsText Job skills as CSV/text
+     * @return float Percentage 0-100
+     */
     private function calculateSkillScore($candidateSkillsText, $jobSkillsText) {
         $candidateSkills = $this->splitCsvValues($candidateSkillsText);
         $jobSkills = $this->splitCsvValues($jobSkillsText);
@@ -832,6 +979,13 @@ class Applications extends Controller {
         return round(($matchCount / max(count($jobSkills), 1)) * 100, 2);
     }
 
+    /**
+     * Calculate education match score
+     *
+     * @param string $candidateEducationText Candidate education text
+     * @param string $jobContextText Job context text
+     * @return float
+     */
     private function calculateEducationScore($candidateEducationText, $jobContextText) {
         $candidateEducationText = $this->normalizeText($candidateEducationText);
         $jobContextText = $this->normalizeText($jobContextText);
@@ -865,6 +1019,14 @@ class Applications extends Controller {
         return round(($levelScore * 0.7) + ($keywordScore * 0.3), 2);
     }
 
+    /**
+     * Calculate experience score
+     *
+     * @param int|string $candidateExperienceYears Candidate years of experience (int or numeric string)
+     * @param string $jobContextText Job context text
+     * @param string $evidenceText Combined evidence text from profile/CV
+     * @return float
+     */
     private function calculateExperienceScore($candidateExperienceYears, $jobContextText, $evidenceText) {
         $candidateExperienceYears = max(0, (int) $candidateExperienceYears);
         $requiredYears = $this->extractRequiredYears($jobContextText);
@@ -892,6 +1054,13 @@ class Applications extends Controller {
         return round(min(130.0, $baseScore + $evidenceBonus), 2);
     }
 
+    /**
+     * Calculate activity score from profile/CV evidence
+     *
+     * @param string $evidenceText Evidence text
+     * @param string $jobSkillsText Job skills text
+     * @return float
+     */
     private function calculateActivityScore($evidenceText, $jobSkillsText) {
         $evidenceText = $this->normalizeText($evidenceText);
 
@@ -935,6 +1104,281 @@ class Applications extends Controller {
         $relevanceScore = empty($jobSkillTokens) ? 50.0 : min(100.0, ($matched / $relevanceDivider) * 100.0);
 
         return round(($groupScore * 0.6) + ($relevanceScore * 0.4), 2);
+    }
+
+    /**
+     * Analyze CV file for relevance/consistency and produce scores
+     *
+     * @param string $cvFile Filename or path segment of CV
+     * @param string $jobContextText Concatenated job title/department/requirements/description
+     * @param string $jobSkillsText CSV or text of job skills
+     * @param string $profileEvidenceText Candidate profile text (skills, education, bio)
+     * @return array<string,mixed>
+     */
+    private function analyzeCvDocument($cvFile, $jobContextText, $jobSkillsText, $profileEvidenceText) {
+        $cacheKey = md5((string) $cvFile . '|' . $jobContextText . '|' . $jobSkillsText . '|' . $profileEvidenceText);
+        if (isset($this->cvAnalysisCache[$cacheKey])) {
+            return $this->cvAnalysisCache[$cacheKey];
+        }
+
+        $analysis = [
+            'has_file' => false,
+            'has_valid_text' => false,
+            'is_disqualified' => true,
+            'job_relevance' => 0.0,
+            'profile_consistency' => 0.0,
+            'quality_factor' => 0.2,
+            'summary' => 'CV belum tersedia',
+            'text' => ''
+        ];
+
+        $cvFile = basename((string) $cvFile);
+        if ($cvFile === '') {
+            $this->cvAnalysisCache[$cacheKey] = $analysis;
+            return $analysis;
+        }
+
+        $analysis['has_file'] = true;
+        $path = $this->resolveCvPath($cvFile);
+        if ($path === null || !is_file($path)) {
+            $analysis['summary'] = 'File CV tidak ditemukan di server';
+            $this->cvAnalysisCache[$cacheKey] = $analysis;
+            return $analysis;
+        }
+
+        $fileSize = (int) @filesize($path);
+        if ($fileSize > 0 && $fileSize < 1024) {
+            $analysis['summary'] = 'CV terdeteksi terlalu kecil dan berisiko kosong';
+            $analysis['quality_factor'] = 0.15;
+            $this->cvAnalysisCache[$cacheKey] = $analysis;
+            return $analysis;
+        }
+
+        $extractedText = $this->extractTextFromCvFile($path);
+        $normalizedCvText = $this->normalizeText($extractedText);
+        $analysis['text'] = $normalizedCvText;
+
+        if ($normalizedCvText === '') {
+            $analysis['summary'] = 'Isi CV tidak dapat dibaca atau kosong';
+            $analysis['quality_factor'] = 0.15;
+            $this->cvAnalysisCache[$cacheKey] = $analysis;
+            return $analysis;
+        }
+
+        $cvTokens = $this->extractKeywords($normalizedCvText, 3);
+        // require a small minimum amount of tokens, but be permissive for short CVs
+        if (count($cvTokens) < 8) {
+            $analysis['summary'] = 'Isi CV terlalu minim untuk evaluasi akurat';
+            $analysis['quality_factor'] = 0.25;
+            $this->cvAnalysisCache[$cacheKey] = $analysis;
+            return $analysis;
+        }
+
+        $analysis['has_valid_text'] = true;
+
+        $jobTokens = $this->extractKeywords(trim($jobContextText . ' ' . $jobSkillsText), 3);
+        $profileTokens = $this->extractKeywords((string) $profileEvidenceText, 3);
+
+        $jobOverlap = $this->calculateTokenOverlapScore($cvTokens, $jobTokens, 8);
+        $profileOverlap = $this->calculateTokenOverlapScore($cvTokens, $profileTokens, 10);
+
+        $analysis['job_relevance'] = round($jobOverlap, 2);
+        $analysis['profile_consistency'] = round($profileOverlap, 2);
+        $analysis['quality_factor'] = round(
+            max(
+                0.15,
+                min(
+                    1.0,
+                    ($jobOverlap * 0.6 + $profileOverlap * 0.4) / 100
+                )
+            ),
+            4
+        );
+
+        // Adjust thresholds to be a bit more permissive to avoid false positives
+        if ($jobOverlap < 10) {
+            $analysis['summary'] = 'CV tidak relevan dengan posisi yang dilamar';
+            $analysis['is_disqualified'] = true;
+            $analysis['quality_factor'] = max(0.18, min($analysis['quality_factor'], 0.45));
+        } elseif ($profileOverlap < 8) {
+            $analysis['summary'] = 'Isi CV tidak konsisten dengan profil kandidat';
+            $analysis['is_disqualified'] = true;
+            $analysis['quality_factor'] = max(0.25, min($analysis['quality_factor'], 0.55));
+        } else {
+            $analysis['summary'] = 'CV valid dan relevan untuk posisi';
+            $analysis['is_disqualified'] = false;
+            $analysis['quality_factor'] = max(0.55, $analysis['quality_factor']);
+        }
+
+        $this->cvAnalysisCache[$cacheKey] = $analysis;
+        return $analysis;
+    }
+
+    /**
+     * Resolve CV filename to an absolute path on disk
+     *
+     * @param string $cvFile
+     * @return string|null
+     */
+    /**
+     * Resolve CV filename to an absolute path on disk
+     *
+     * @param string $cvFile
+     * @return string|null
+     */
+    private function resolveCvPath($cvFile) {
+        $filename = basename((string) $cvFile);
+        if ($filename === '') {
+            return null;
+        }
+
+        $primary = uploadPath('cv', $filename);
+        if (is_file($primary)) {
+            return $primary;
+        }
+
+        $legacy = ROOTPATH . 'cv/' . $filename;
+        if (is_file($legacy)) {
+            return $legacy;
+        }
+
+        return null;
+    }
+
+    /**
+     * Extract readable text from a CV file (pdf/docx/txt)
+     *
+     * @param string $path Absolute path
+     * @return string
+     */
+    private function extractTextFromCvFile(string $path): string {
+        $path = (string) $path;
+        if ($path === '' || !is_file($path)) {
+            return '';
+        }
+
+        $extension = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));
+
+        if ($extension === 'docx') {
+            if (!class_exists('ZipArchive')) {
+                return '';
+            }
+
+            $zip = new ZipArchive();
+            if ($zip->open($path) !== true) {
+                return '';
+            }
+
+            $xml = (string) $zip->getFromName('word/document.xml');
+            $zip->close();
+            if ($xml === '') {
+                return '';
+            }
+
+            $text = strip_tags(str_replace('</w:p>', "\n", $xml));
+            return trim(preg_replace('/\s+/', ' ', html_entity_decode($text, ENT_QUOTES, 'UTF-8')));
+        }
+
+        $raw = @file_get_contents($path);
+        if ($raw === false || $raw === '') {
+            return '';
+        }
+
+        if ($extension === 'pdf') {
+            return $this->extractTextFromPdf($raw);
+        }
+
+        $text = preg_replace('/[^[:print:]\r\n\t]/', ' ', $raw);
+        return trim(preg_replace('/\s+/', ' ', (string) $text));
+    }
+
+    /**
+     * Attempt to extract text from a raw PDF binary blob
+     *
+     * @param string $binary Raw file contents
+     * @return string
+     */
+    private function extractTextFromPdf(string $binary): string {
+        $binary = (string) $binary;
+        if ($binary === '') {
+            return '';
+        }
+
+        $text = '';
+        if (preg_match_all('/\(([^()]*)\)\s*Tj/s', $binary, $matches)) {
+            foreach ($matches[1] as $segment) {
+                $text .= ' ' . $this->decodePdfLiteralString((string) $segment);
+            }
+        }
+
+        if (preg_match_all('/\[(.*?)\]\s*TJ/s', $binary, $arrayMatches)) {
+            foreach ($arrayMatches[1] as $chunk) {
+                if (preg_match_all('/\(([^()]*)\)/s', (string) $chunk, $parts)) {
+                    foreach ($parts[1] as $segment) {
+                        $text .= ' ' . $this->decodePdfLiteralString((string) $segment);
+                    }
+                }
+            }
+        }
+
+        if (trim($text) === '') {
+            $text = preg_replace('/[^[:print:]\r\n\t]/', ' ', $binary);
+        }
+
+        return trim(preg_replace('/\s+/', ' ', (string) $text));
+    }
+
+    /**
+     * Decode escaped PDF literal string contents into plain text
+     *
+     * @param string $text
+     * @return string
+     */
+    /**
+     * Decode escaped PDF literal string contents into plain text
+     *
+     * @param string $text Raw literal string from PDF content stream
+     * @return string Decoded plain text
+     */
+    private function decodePdfLiteralString(string $text): string {
+        $text = str_replace(
+            ['\\\\', '\\(', '\\)', '\\n', '\\r', '\\t', '\\b', '\\f'],
+            ['\\', '(', ')', "\n", "\r", "\t", ' ', ' '],
+            (string) $text
+        );
+
+        // Remove octal escapes like \123
+        $text = preg_replace('/\\\\[0-7]{1,3}/', ' ', (string) $text);
+
+        return (string) preg_replace('/[^[:print:]\r\n\t]/', ' ', (string) $text);
+    }
+
+    /**
+     * Calculate overlap percentage between candidate tokens and reference tokens
+     *
+     * @param array<string> $candidateTokens
+     * @param array<string> $referenceTokens
+     * @param int $capDivider Divider cap to normalize overlap
+     * @return float
+     */
+    private function calculateTokenOverlapScore(array $candidateTokens, array $referenceTokens, int $capDivider = 8): float {
+        $candidateTokens = array_values(array_unique(array_filter((array) $candidateTokens)));
+        $referenceTokens = array_values(array_unique(array_filter((array) $referenceTokens)));
+
+        if (empty($candidateTokens) || empty($referenceTokens)) {
+            return 0.0;
+        }
+
+        $candidateMap = array_fill_keys($candidateTokens, true);
+        $matched = 0;
+        foreach ($referenceTokens as $token) {
+            if (isset($candidateMap[$token])) {
+                $matched++;
+            }
+        }
+
+        $divider = max(min(count($referenceTokens), (int) $capDivider), 1);
+        return min(100.0, ($matched / $divider) * 100.0);
     }
 
     private function extractRequiredYears($text) {
@@ -997,7 +1441,7 @@ class Applications extends Controller {
         return min($levels);
     }
 
-    private function splitCsvValues($text) {
+    private function splitCsvValues(string $text): array {
         $text = $this->normalizeText((string) $text);
         if ($text === '') {
             return [];
@@ -1016,7 +1460,14 @@ class Applications extends Controller {
         return array_values(array_unique($result));
     }
 
-    private function countSkillMatches($candidateSkills, $jobSkills) {
+    /**
+     * Count matching skills between candidate and job
+     *
+     * @param array<string> $candidateSkills
+     * @param array<string> $jobSkills
+     * @return int
+     */
+    private function countSkillMatches(array $candidateSkills, array $jobSkills): int {
         $matches = 0;
         $usedCandidateIndex = [];
 
@@ -1051,7 +1502,7 @@ class Applications extends Controller {
         return $matches;
     }
 
-    private function extractKeywords($text, $minLength = 3) {
+    private function extractKeywords(string $text, int $minLength = 3): array {
         $text = $this->normalizeText((string) $text);
         if ($text === '') {
             return [];
@@ -1078,7 +1529,7 @@ class Applications extends Controller {
         return array_values(array_unique($keywords));
     }
 
-    private function normalizeText($text) {
+    private function normalizeText(string $text): string {
         $text = (string) $text;
         $text = trim($text);
         if ($text === '') {
@@ -1092,8 +1543,13 @@ class Applications extends Controller {
         return strtolower($text);
     }
 
-    private function candidateIsEligibleForRecommendation($status) {
+    private function candidateIsEligibleForRecommendation(string $status): bool {
         $status = (string) $status;
         return !in_array($status, ['accepted', 'rejected'], true);
+    }
+
+    private function candidateCanAppearInRecommendationDisplay(string $status): bool {
+        $status = (string) $status;
+        return $status !== 'rejected';
     }
 }

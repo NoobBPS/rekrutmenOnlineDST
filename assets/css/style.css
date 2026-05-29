@@ -1008,7 +1008,64 @@ small {
 .conv-header {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.conv-header-main {
+  display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.conv-name-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.conv-meta-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.chat-status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.chat-status-info {
+  background: #e6f4ff;
+  color: #226eb8;
+}
+
+.chat-status-primary {
+  background: #eef2ff;
+  color: #3548b6;
+}
+
+.chat-status-success {
+  background: #e5f7eb;
+  color: #1a7f41;
+}
+
+.chat-status-neutral {
+  background: #efefef;
+  color: #565d66;
+}
+
+.conv-application {
+  color: var(--muted);
+  margin: 3px 0;
+  font-size: 0.9rem;
 }
 
 .conv-preview,

@@ -47,7 +47,7 @@ class Chat extends Controller {
         );
 
         foreach ($conversations as &$conversation) {
-            $conversation['last_message'] = $this->previewMessage($conversation['last_message'] ?? '');
+            $conversation = $this->enrichConversationSummary($conversation);
         }
         unset($conversation);
 
@@ -86,7 +86,7 @@ class Chat extends Controller {
         );
 
         foreach ($conversations as &$conversation) {
-            $conversation['last_message'] = $this->previewMessage($conversation['last_message'] ?? '');
+            $conversation = $this->enrichConversationSummary($conversation);
         }
         unset($conversation);
 
@@ -535,6 +535,65 @@ class Chat extends Controller {
         return $normalized;
     }
 
+    private function enrichConversationSummary(array $conversation): array {
+        $conversation['last_message'] = $this->previewMessage((string) ($conversation['last_message'] ?? ''));
+        $partnerId = (int) ($conversation['partner_id'] ?? 0);
+        $partnerRole = (string) ($conversation['role'] ?? '');
+
+        $context = $partnerId > 0 ? $this->getConversationApplicationContext($partnerId, $partnerRole) : null;
+        $statusMeta = $this->buildConversationStatusMeta($context);
+
+        $conversation['chat_status_label'] = (string) ($statusMeta['label'] ?? 'Chat Dimulai');
+        $conversation['chat_status_variant'] = (string) ($statusMeta['variant'] ?? 'info');
+        $conversation['chat_status_detail'] = (string) ($statusMeta['detail'] ?? '');
+        $conversation['application_context'] = $context;
+
+        return $conversation;
+    }
+
+    private function buildConversationStatusMeta(?array $applicationContext): array {
+        if (empty($applicationContext)) {
+            return [
+                'label' => 'Terhubung dengan HRD',
+                'variant' => 'info',
+                'detail' => 'Percakapan telah dimulai.'
+            ];
+        }
+
+        $statusKey = (string) ($applicationContext['status_key'] ?? '');
+        $jobTitle = trim((string) ($applicationContext['job_title'] ?? ''));
+        $companyName = trim((string) ($applicationContext['company_name'] ?? ''));
+        $detail = $jobTitle !== ''
+            ? 'Melamar posisi: ' . $jobTitle . ($companyName !== '' ? ' - ' . $companyName : '')
+            : 'Percakapan terkait lamaran sudah aktif.';
+
+        if (hasRole('hrd') || hasRole('admin')) {
+            $staffMap = [
+                'pending' => ['label' => 'Lamaran Baru', 'variant' => 'info'],
+                'screening' => ['label' => 'Screening', 'variant' => 'info'],
+                'interview' => ['label' => 'Interview', 'variant' => 'primary'],
+                'accepted' => ['label' => 'Diterima', 'variant' => 'success'],
+                'rejected' => ['label' => 'Ditolak', 'variant' => 'neutral']
+            ];
+
+            $meta = $staffMap[$statusKey] ?? ['label' => 'Status Lamaran', 'variant' => 'info'];
+            $meta['detail'] = $detail;
+            return $meta;
+        }
+
+        $candidateMap = [
+            'pending' => ['label' => 'Telah Melamar / Chat Dimulai', 'variant' => 'info'],
+            'screening' => ['label' => 'Telah Melamar / Chat Dimulai', 'variant' => 'info'],
+            'interview' => ['label' => 'Terhubung dengan HRD', 'variant' => 'info'],
+            'accepted' => ['label' => 'Terhubung dengan HRD', 'variant' => 'success'],
+            'rejected' => ['label' => 'Belum Sesuai', 'variant' => 'neutral']
+        ];
+
+        $meta = $candidateMap[$statusKey] ?? ['label' => 'Chat Dimulai', 'variant' => 'info'];
+        $meta['detail'] = $detail;
+        return $meta;
+    }
+
     private function getConversationApplicationContext(int $partnerId, string $partnerRole): ?array {
         $currentUserId = (int) ($_SESSION['user_id'] ?? 0);
         if ($currentUserId <= 0) {
@@ -619,8 +678,11 @@ class Chat extends Controller {
 
         return [
             'application_id' => (int) ($application['application_id'] ?? 0),
+            'status_key' => $statusKey,
+            'status_label' => $statusText,
             'status' => $statusText,
             'job_title' => (string) ($application['job_title'] ?? ''),
+            'company_name' => 'PT Digdaya Solusi Teknologi',
             'location' => (string) ($application['location'] ?? ''),
             'benefits' => $benefits,
             'cv_available' => !empty($application['cv_file']),

@@ -3,7 +3,7 @@
  * Auth Controller - DST Recruitment System
  */
 
-class Auth extends Controller {
+class Auth extends \Controller {
     
     public function __construct() {
         parent::__construct();
@@ -63,7 +63,7 @@ class Auth extends Controller {
 
         requireValidCsrf();
         
-        $email = sanitize($_POST['email'] ?? '');
+        $email = strtolower(trim((string) ($_POST['email'] ?? '')));
         $password = $_POST['password'] ?? '';
         
         if (empty($email) || empty($password)) {
@@ -72,7 +72,7 @@ class Auth extends Controller {
         }
         
         $user = db()->row(
-            "SELECT * FROM users WHERE email = ?",
+            "SELECT * FROM users WHERE LOWER(email) = ?",
             [$email]
         );
         
@@ -121,7 +121,7 @@ class Auth extends Controller {
 
         requireValidCsrf();
         
-        $email = sanitize($_POST['email'] ?? '');
+        $email = strtolower(trim((string) ($_POST['email'] ?? '')));
         $password = $_POST['password'] ?? '';
         $confirm_password = $_POST['confirm_password'] ?? '';
         $full_name = sanitize($_POST['full_name'] ?? '');
@@ -149,7 +149,7 @@ class Auth extends Controller {
         
         // Cek email sudah terdaftar
         $existing = db()->row(
-            "SELECT 1 FROM users WHERE email = ? LIMIT 1",
+            "SELECT 1 FROM users WHERE LOWER(email) = ? LIMIT 1",
             [$email]
         );
         
@@ -167,16 +167,11 @@ class Auth extends Controller {
         );
         
         if ($success) {
-            $user_id = db()->lastInsertId();
-            
-            $_SESSION['user_id'] = $user_id;
-            $_SESSION['email'] = $email;
-            $_SESSION['full_name'] = $full_name;
-            $_SESSION['role'] = 'user';
-            session_regenerate_id(true);
-            
-            setFlash('success', 'Pendaftaran berhasil! Silakan lengkapi profil Anda.');
-            redirect('profile/edit');
+            // Do not auto-login the user after registration. Redirect to the login page
+            // so they can explicitly authenticate. This avoids creating sessions before
+            // email verification or profile completion workflows.
+            setFlash('success', 'Pendaftaran berhasil! Silakan login untuk melanjutkan.');
+            redirect('auth/login');
         } else {
             setFlash('error', 'Pendaftaran gagal. Silakan coba lagi.');
             redirect('auth/register');

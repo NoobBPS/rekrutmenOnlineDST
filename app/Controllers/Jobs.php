@@ -205,6 +205,15 @@ class Jobs extends Controller {
             redirect('jobs/apply/' . $job_id);
         }
         $cv_file = $upload_result['filename'];
+        $cvPath = uploadPath('cv', $cv_file);
+        $cvValidation = $this->validateUploadedCv($cvPath);
+        if (empty($cvValidation['valid'])) {
+            if (is_file($cvPath)) {
+                @unlink($cvPath);
+            }
+            setFlash('error', 'CV ditolak: ' . ($cvValidation['message'] ?? 'Dokumen tidak valid'));
+            redirect('jobs/apply/' . $job_id);
+        }
         
         // Ambil skills dari profil user
         $user = db()->row("SELECT skills FROM users WHERE user_id = ?", [$_SESSION['user_id']]);
@@ -236,6 +245,107 @@ class Jobs extends Controller {
             setFlash('error', 'Gagal mengirim lamaran. Silakan coba lagi.');
             redirect('jobs/apply/' . $job_id);
         }
+    }
+
+    private function validateUploadedCv($path) {
+        $path = (string) $path;
+        if ($path === '' || !is_file($path)) {
+            return ['valid' => false, 'message' => 'File CV tidak ditemukan setelah upload'];
+        }
+
+        $size = (int) @filesize($path);
+        if ($size > 0 && $size < 1024) {
+            return ['valid' => false, 'message' => 'Ukuran CV terlalu kecil dan terindikasi kosong'];
+        }
+
+        $text = $this->extractUploadedCvText($path);
+        $text = trim(preg_replace('/\s+/', ' ', $text));
+        if ($text === '') {
+            return ['valid' => false, 'message' => 'Isi CV kosong atau tidak terbaca'];
+        }
+
+        $tokens = preg_split('/[^a-z0-9\+#]+/i', strtolower($text));
+        $tokens = array_values(array_filter(array_unique(array_map('trim', (array) $tokens))));
+        if (count($tokens) < 15) {
+            return ['valid' => false, 'message' => 'Isi CV terlalu minim untuk dievaluasi'];
+        }
+
+        return ['valid' => true, 'message' => 'ok'];
+    }
+
+    private function extractUploadedCvText($path) {
+        $extension = strtolower((string) pathinfo((string) $path, PATHINFO_EXTENSION));
+
+        if ($extension === 'docx') {
+            if (!class_exists('ZipArchive')) {
+                return '';
+            }
+
+            $zip = new ZipArchive();
+            if ($zip->open($path) !== true) {
+                return '';
+            }
+
+            $xml = (string) $zip->getFromName('word/document.xml');
+            $zip->close();
+            if ($xml === '') {
+                return '';
+            }
+
+            return strip_tags(str_replace('</w:p>', "\n", $xml));
+        }
+
+        $raw = @file_get_contents($path);
+        if ($raw === false || $raw === '') {
+            return '';
+        }
+
+        if ($extension === 'pdf') {
+            return $this->extractTextFromPdfBinary($raw);
+        }
+
+        $text = preg_replace('/[^[:print:]\r\n\t]/', ' ', $raw);
+        return (string) $text;
+    }
+
+    private function extractTextFromPdfBinary($binary) {
+        $binary = (string) $binary;
+        if ($binary === '') {
+            return '';
+        }
+
+        $text = '';
+        if (preg_match_all('/\(([^()]*)\)\s*Tj/s', $binary, $matches)) {
+            foreach ($matches[1] as $segment) {
+                $text .= ' ' . $this->decodePdfMessageChunk((string) $segment);
+            }
+        }
+
+        if (preg_match_all('/\[(.*?)\]\s*TJ/s', $binary, $arrayMatches)) {
+            foreach ($arrayMatches[1] as $chunk) {
+                if (preg_match_all('/\(([^()]*)\)/s', (string) $chunk, $parts)) {
+                    foreach ($parts[1] as $segment) {
+                        $text .= ' ' . $this->decodePdfMessageChunk((string) $segment);
+                    }
+                }
+            }
+        }
+
+        if (trim($text) === '') {
+            $text = preg_replace('/[^[:print:]\r\n\t]/', ' ', $binary);
+        }
+
+        return (string) $text;
+    }
+
+    private function decodePdfMessageChunk($text) {
+        $text = str_replace(
+            ['\\\\', '\(', '\)', '\n', '\r', '\t', '\b', '\f'],
+            ['\\', '(', ')', "\n", "\r", "\t", ' ', ' '],
+            (string) $text
+        );
+        $text = preg_replace('/\\\\[0-7]{1,3}/', ' ', (string) $text);
+        return (string) preg_replace('/[^[:print:]\r\n\t]/', ' ', (string) $text);
     }
     
     // ========================

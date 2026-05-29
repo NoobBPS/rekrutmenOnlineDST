@@ -1,0 +1,29 @@
+{
+  "name": "dst/recruitment",
+  "description": "DST Recruitment web app",
+  "license": "proprietary",
+  "type": "project",
+  "require": {
+    "php": "^8.1",
+    "codeigniter4/framework": "^4.6"
+  },
+  "autoload": {
+    "classmap": [
+      "app/Controllers",
+      "app/core"
+    ],
+    "files": [
+      "app/helpers.php"
+    ]
+  },
+  "repositories": [
+    {
+      "type": "composer",
+      "url": "http://repo.packagist.org"
+    }
+  ],
+  "config": {
+    "secure-http": false,
+    "sort-packages": true
+  }
+}

@@ -57,6 +57,12 @@ $decision_saw_display = isset($decision_saw_display) && is_array($decision_saw_d
             <?php elseif (!empty($job_saw_recommendation['candidate_name'])): ?>
             <small>Rekomendasi SAW saat ini: <?= h($job_saw_recommendation['candidate_name']) ?></small>
             <?php endif; ?>
+            <?php if (!empty($application_saw['saw_cv_disqualified'])): ?>
+            <p><span class="badge badge-warning">Validasi CV: Perlu Revisi</span></p>
+            <?php endif; ?>
+            <?php if (!empty($application_saw['saw_cv_summary'])): ?>
+            <small><?= h($application_saw['saw_cv_summary']) ?></small>
+            <?php endif; ?>
             <?php endif; ?>
             <?php if (hasRole('hrd')): ?>
             <a href="<?= BASE_URL ?>chat/start/<?= (int) ($application['user_id'] ?? 0) ?>" class="btn btn-sm btn-primary mt-8">Mulai Chat Kandidat</a>

@@ -45,7 +45,7 @@
         Pengalaman <?= (int) (($saw_weights['experience'] ?? 0) * 100) ?>%,
         Aktivitas CV (magang/organisasi/proyek) <?= (int) (($saw_weights['activity'] ?? 0) * 100) ?>%.
     </p>
-    <small>SAW formula uses: S = Skill, K = Knowledge (Education), E = Experience, A = Activity.</small>
+    <small>SAW formula uses: S = Skill, K = Knowledge (Education), E = Experience, A = Activity. Skor akhir juga dipenalti bila isi CV kosong/tidak relevan.</small>
 </div>
 <?php endif; ?>
 
@@ -60,6 +60,7 @@
             Skor SAW: <strong><?= number_format((float) $recommendation['saw_score'], 2) ?>%</strong>
             | Total kandidat: <?= (int) ($recommendation['total_candidates'] ?? 0) ?>
         </p>
+        <?php if (!empty($recommendation['can_auto_apply'])): ?>
         <form action="<?= BASE_URL ?>applications/applyRecommendation" method="POST" class="recommendation-form">
             <?= csrfField() ?>
             <input type="hidden" name="job_id" value="<?= (int) ($recommendation['job_id'] ?? 0) ?>">
@@ -71,8 +72,13 @@
             <button class="btn btn-primary btn-sm" type="submit">Terapkan Rekomendasi</button>
         </form>
         <small>HRD tetap dapat memilih kandidat secara manual dari tabel pelamar.</small>
+        <?php elseif (!empty($recommendation['reason'])): ?>
+        <small><?= h($recommendation['reason']) ?></small>
+        <?php endif; ?>
         <?php else: ?>
-        <p class="recommendation-meta">Belum ada kandidat aktif yang bisa direkomendasikan (semua sudah accepted/rejected).</p>
+        <p class="recommendation-meta">
+            <?= h($recommendation['reason'] ?? 'Belum ada kandidat yang lolos validasi CV untuk rekomendasi otomatis.') ?>
+        </p>
         <?php endif; ?>
     </div>
     <?php endforeach; ?>
@@ -134,6 +140,12 @@
                     <small>Rank #<?= (int) ($app['saw_rank'] ?? 0) ?> / <?= (int) ($app['saw_total_candidates'] ?? 0) ?></small><br>
                     <?php if (!empty($app['is_saw_recommended'])): ?>
                     <span class="badge badge-success mt-8">Rekomendasi SAW</span>
+                    <?php endif; ?>
+                    <?php if (!empty($app['saw_cv_disqualified'])): ?>
+                    <br><span class="badge badge-warning mt-8">CV Perlu Revisi</span>
+                    <br><small><?= h($app['saw_cv_summary'] ?? 'CV tidak memenuhi evaluasi otomatis') ?></small>
+                    <?php elseif (!empty($app['saw_cv_summary'])): ?>
+                    <br><small><?= h($app['saw_cv_summary']) ?></small>
                     <?php endif; ?>
                 </td>
                 <td><?= statusLabel($app['status']) ?></td>

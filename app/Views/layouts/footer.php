@@ -2,7 +2,9 @@
     </main>
 
     <?php
-    $showMobileBottomNav = isLoggedIn() && !hasRole('hrd') && !hasRole('admin');
+    $showMobileBottomNav = isLoggedIn();
+    $isHRD = hasRole('hrd');
+    $isAdmin = hasRole('admin');
     $unreadCount = 0;
     if (isLoggedIn()) {
         try {
@@ -18,18 +20,31 @@
     $currentSection = $routeSegments[0] ?? 'dashboard';
 
     $mobileActivePage = 'home';
-    if ($currentSection === 'applications') {
+    if ($currentSection === 'applications' || ($isAdmin && $currentSection === 'jobs')) {
         $mobileActivePage = 'applied';
     } elseif ($currentSection === 'chat') {
         $mobileActivePage = 'chat';
     } elseif ($currentSection === 'profile') {
         $mobileActivePage = 'profile';
     }
+
+    $mobileHomeUrl = BASE_URL . 'dashboard';
+    $mobileAppliedUrl = BASE_URL . 'applications';
+    $mobileAppliedLabel = 'Applied';
+    if ($isHRD) {
+        $mobileHomeUrl = BASE_URL . 'dashboard/hrd';
+        $mobileAppliedUrl = BASE_URL . 'applications/hrd';
+        $mobileAppliedLabel = 'Pelamar';
+    } elseif ($isAdmin) {
+        $mobileHomeUrl = BASE_URL . 'jobs/manage';
+        $mobileAppliedUrl = BASE_URL . 'jobs/manage';
+        $mobileAppliedLabel = 'Lowongan';
+    }
     ?>
 
     <?php if ($showMobileBottomNav): ?>
     <nav class="mobile-bottom-nav" aria-label="Navigasi utama mobile">
-        <a href="<?= BASE_URL ?>dashboard" class="mobile-bottom-nav__item <?= $mobileActivePage === 'home' ? 'is-active' : '' ?>" <?= $mobileActivePage === 'home' ? 'aria-current="page"' : '' ?>>
+        <a href="<?= h($mobileHomeUrl) ?>" class="mobile-bottom-nav__item <?= $mobileActivePage === 'home' ? 'is-active' : '' ?>" <?= $mobileActivePage === 'home' ? 'aria-current="page"' : '' ?>>
             <span class="mobile-bottom-nav__icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none">
                     <path d="M3.5 10.5L12 3.75L20.5 10.5V19.25C20.5 19.94 19.94 20.5 19.25 20.5H4.75C4.06 20.5 3.5 19.94 3.5 19.25V10.5Z" />
@@ -38,7 +53,7 @@
             </span>
             <span class="mobile-bottom-nav__label">Home</span>
         </a>
-        <a href="<?= BASE_URL ?>applications" class="mobile-bottom-nav__item <?= $mobileActivePage === 'applied' ? 'is-active' : '' ?>" <?= $mobileActivePage === 'applied' ? 'aria-current="page"' : '' ?>>
+        <a href="<?= h($mobileAppliedUrl) ?>" class="mobile-bottom-nav__item <?= $mobileActivePage === 'applied' ? 'is-active' : '' ?>" <?= $mobileActivePage === 'applied' ? 'aria-current="page"' : '' ?>>
             <span class="mobile-bottom-nav__icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none">
                     <path d="M8.5 6V4.75C8.5 4.06 9.06 3.5 9.75 3.5H14.25C14.94 3.5 15.5 4.06 15.5 4.75V6" />
@@ -46,7 +61,7 @@
                     <path d="M4 10.25C6.62 11.51 9.28 12.12 12 12.12C14.72 12.12 17.38 11.51 20 10.25" />
                 </svg>
             </span>
-            <span class="mobile-bottom-nav__label">Applied</span>
+            <span class="mobile-bottom-nav__label"><?= h($mobileAppliedLabel) ?></span>
         </a>
         <a href="<?= BASE_URL ?>chat" class="mobile-bottom-nav__item <?= $mobileActivePage === 'chat' ? 'is-active' : '' ?>" <?= $mobileActivePage === 'chat' ? 'aria-current="page"' : '' ?>>
             <span class="mobile-bottom-nav__icon" aria-hidden="true">

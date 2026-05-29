@@ -14,7 +14,7 @@ $isLoggedIn = isLoggedIn();
 $isHRD = $isLoggedIn && hasRole('hrd');
 $isAdmin = $isLoggedIn && hasRole('admin');
 $isStaff = $isHRD || $isAdmin;
-$hasMobileBottomNav = $isLoggedIn && !$isStaff;
+$hasMobileBottomNav = $isLoggedIn;
 $bodyClasses = [];
 if ($hasMobileBottomNav) {
     $bodyClasses[] = 'has-mobile-bottom-nav';

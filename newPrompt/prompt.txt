@@ -1,19 +1,26 @@
-1. Terapkan di mobile view agar chat bisa bikin baris baru dengan mengllik tombol 
-panah ke bawah kiri (enter versi hp) yang ada di keyboard handphone.. Dan mengirim Diwakili dengan tombol 
-panah kanan (bukan di keyboard hp) yang ada di samping kanan kolom input pesan (lambangnya ">")..
-2. Rapihkan tata letak tulisan di semua halaman..
-3. Di tampilan mobile, muncul angka di atas kanan logo chat di tampilan mobile kalau ada yang chat (di halaman akun user maupun hrd)
-4. dan di menu chat, buat agar username dan potoprofile hrd maupun user tetap berada di atas / tidak ikut kescroll (menghilang) ketika discroll chatnya (mungkin
-seperti fixed position)..
-5. lihat gambar login page (tampilan mobile).. ubah tombol menu jadi tombol dengan simbol hamburger.. lalu Ubah kata "Masuk ke DST Recruitment" di container login di tengah jadi "Login".. hilangkan footer di tampilan mobile..
+13. oh iya, kan sebelumnya sudah dibuat akun untuk 
+a. HRD
+- id: hrd@dst.co.id
+- pw: password123
+b. Admin
+- id: admin.rekrutmen@dst.co.id
+- pw: AdminDst2026!
+nah tapi skrg saat ingin memasukkan akun di atas di halaman login, malah gabisa "email / password salah", 
+padahal sebelumnya bisa.. perbaiki ya agar bisa login dengan akun-akun di atas
 
-tiru 5 perintah di atas berdasarkan gambar yang dikirim
+14. setelah register akun berhasil kan.. akun akan dibawa ke halaman profil.. nah saya ingin setelah registrasi akun berhasil.. maka langsung dibawa ke halaman login.. bukan ke halaman profil langsung..
 
-1. perbaiki seluruh error / warning yang ada di tab problems pada menu terminal di kanan (total 55)
-2. uNTUK role akun saran dosen ada 3, yaitu HRD, User, dan Admin dengan pembagian tugas berikut
-Admin: Hanya admin yang bisa menambah, edit, maupun hapus lowongan pekerjaan yang ada (di halaman kelola lowongan), dengan kata lain akun user dan HRD tidak ada halaman "kelola lowongan"
-User: Bisa melihat lowongan yang tersedia dan melamarnya (ini sudah benar, tidak perlu banyak diubah untuk role user)
-HRD: Bisa menerima (approve) / menolak (rejected) lamaran dari para kandidat
-3. Ubah warna tulisan penolakan kandidat di halaman user menjadi warna putih dengan background merah agar terlihat kontras
-4. tolong buatkan juga untuk isi dari manual booknya (panduan penggunaan aplikasi)
-5. Terakhir bantu saya kodingan PHP metode Simple Addictive Weighting ini dengan memberikan penjelasan tambahan mungkin melalui file .txt nanti yang kau buat
+dan pebaiki semua error berikut
+
+Syntax error: unexpected token '$text'
+Parameter $text has no type information available.
+Parameter $candidateSkills has no type information available.
+Parameter $jobSkills has no type information available.
+Parameter $status has no type information available.
+
+Rapihkan layout di halaman profile tampilan mobile karena masih ada celah background yang terlihat di kanan (mirip warna krem) jadinya gak rapih..
+terus container yang berisi ("DST Recruitment" (di kiri), logo chat (di tengah), dan poto profile (dii kanan)) lebar containernya terlihat tidak memenuhi layar
+ke kanan.. karena jika di zoom out, maka akan terlihat celah yang tadi di kanan dan lebar container yang tidak memenuhi layar 100%
+
+Oh iya.. halaman webnya (setelah login).. saat berganti ke tab lain di browser.. pas balik lagi ke halaman e-recruitment (setelah berhasil login).. maka anehnya balik lagi ke halaman login (kaya logout otomatis..) saya ga mau itu.. buat agar walaupun web ditinggal dalam waktu yang lama.. tidak terjadi logout otomatis.. ok?
+Di chat akun user statusnya itu belum sesuai dengan status yang ditetapkan oleh HRD.. kaya misalnya tadi.. padahal HRD sudah menyeleksi lamaran user menjadi 'Interview', tapi di chat statusnya masih "terhubung dengan HRD".. belum sesuai.. nah saya ingin kamu sesuaikan status HRD di halaman seleksi pelamar.. sesuai dengan status yang tertulis di chat role akun user maupun chat HRD.. agar menjadi misalnya "Interview" dengan warna background yang sesuai dengan statusnya.. jangan lupa untuk menyamakan juga dengan status di halaman pelamar (role akun HRD).. agar di tabel tertulis juga status yang sesuai dengan tadi (misalnya Interview)
