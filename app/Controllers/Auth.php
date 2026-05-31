@@ -373,30 +373,30 @@ class Auth extends \Controller {
      * Send password reset email
      */
     private function sendResetEmail(string $email, string $resetUrl): void {
-        require_once APPPATH . 'Config/Mail.php';
+        try {
+            require_once APPPATH . 'Config/Mail.php';
 
-        $subject = 'Reset Password - DST Recruitment';
-        $boundary = md5(time());
+            $subject = 'Reset Password - DST Recruitment';
 
-        $body = "--{$boundary}\r\n";
-        $body .= "Content-Type: text/html; charset=UTF-8\r\n\r\n";
-        $body .= "<!DOCTYPE html><html><body>";
-        $body .= "<h2>Reset Password</h2>";
-        $body .= "<p>Anda telah meminta reset password untuk akun DST Recruitment.</p>";
-        $body .= "<p>Klik link di bawah untuk mengatur password baru:</p>";
-        $body .= "<p><a href=\"{$resetUrl}\" style=\"display:inline-block;padding:12px 24px;background:#0f5e5e;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;\">Reset Password</a></p>";
-        $body .= "<p>Atau salin link ini ke browser: {$resetUrl}</p>";
-        $body .= "<p>Link ini berlaku selama 1 jam.</p>";
-        $body .= "<p>Jika Anda tidak meminta reset password, abaikan email ini.</p>";
-        $body .= "<hr><p style='color:#888;font-size:12px;'>DST Recruitment - PT Digdaya Solusi Teknologi</p>";
-        $body .= "</body></html>";
-        $body .= "\r\n--{$boundary}--";
+            $body = "<!DOCTYPE html><html><body>";
+            $body .= "<h2>Reset Password</h2>";
+            $body .= "<p>Anda telah meminta reset password untuk akun DST Recruitment.</p>";
+            $body .= "<p>Klik link di bawah untuk mengatur password baru:</p>";
+            $body .= "<p><a href=\"{$resetUrl}\" style=\"display:inline-block;padding:12px 24px;background:#0f5e5e;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;\">Reset Password</a></p>";
+            $body .= "<p>Atau salin link ini ke browser: {$resetUrl}</p>";
+            $body .= "<p>Link ini berlaku selama 1 jam.</p>";
+            $body .= "<p>Jika Anda tidak meminta reset password, abaikan email ini.</p>";
+            $body .= "<hr><p style='color:#888;font-size:12px;'>DST Recruitment - PT Digdaya Solusi Teknologi</p>";
+            $body .= "</body></html>";
 
-        $headers = "From: " . MAIL_FROM_NAME . " <" . MAIL_FROM . ">\r\n";
-        $headers .= "Reply-To: " . MAIL_FROM . "\r\n";
-        $headers .= "MIME-Version: 1.0\r\n";
-        $headers .= "Content-Type: multipart/alternative; boundary=\"{$boundary}\"\r\n";
+            $headers = "From: " . MAIL_FROM_NAME . " <" . MAIL_FROM . ">\r\n";
+            $headers .= "Reply-To: " . MAIL_FROM . "\r\n";
+            $headers .= "MIME-Version: 1.0\r\n";
+            $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
 
-        @mail($email, $subject, $body, $headers);
+            @mail($email, $subject, $body, $headers);
+        } catch (\Throwable $e) {
+            // Email failed but continue silently - reset link is still available via redirect
+        }
     }
 }
