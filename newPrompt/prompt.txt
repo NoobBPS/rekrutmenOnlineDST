@@ -1,7 +1,7 @@
 13. oh iya, kan sebelumnya sudah dibuat akun untuk 
 a. HRD
 - id: hrd@dst.co.id
-- pw: password123
+- pw: inesmonica
 b. Admin
 - id: admin.rekrutmen@dst.co.id
 - pw: AdminDst2026!

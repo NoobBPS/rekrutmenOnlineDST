@@ -75,6 +75,17 @@ CREATE INDEX idx_applications_status ON applications(status);
 CREATE INDEX idx_messages_from_to ON messages(from_user_id, to_user_id);
 CREATE INDEX idx_messages_to_read ON messages(to_user_id, is_read);
 
+CREATE TABLE IF NOT EXISTS password_resets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    token VARCHAR(64) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE INDEX idx_password_resets_email ON password_resets(email);
+CREATE INDEX idx_password_resets_token ON password_resets(token);
+
 -- Default HRD/Admin accounts
 -- hrd@dst.co.id / password123
 -- admin@dst.co.id / password123

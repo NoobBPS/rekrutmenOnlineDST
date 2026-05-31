@@ -202,7 +202,7 @@ class Auth extends \Controller {
     }
     
     /**
-     * Forgot Password (placeholder)
+     * Forgot Password - Show email form
      */
     public function forgot() {
         $data = [
@@ -213,5 +213,156 @@ class Auth extends \Controller {
         $this->view('layouts/header', $data);
         $this->view('auth/forgot', $data);
         $this->view('layouts/footer');
+    }
+
+    /**
+     * Process Forgot Password - Generate reset token
+     */
+    public function doForgot() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('auth/forgot');
+        }
+
+        requireValidCsrf();
+
+        $email = strtolower(trim((string) ($_POST['email'] ?? '')));
+
+        if (empty($email)) {
+            setFlash('error', 'Email wajib diisi');
+            redirect('auth/forgot');
+        }
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            setFlash('error', 'Format email tidak valid');
+            redirect('auth/forgot');
+        }
+
+        // Always show success message to prevent email enumeration
+        $user = db()->row("SELECT user_id FROM users WHERE LOWER(email) = ?", [$email]);
+
+        if ($user) {
+            // Delete old tokens for this email
+            db()->execute("DELETE FROM password_resets WHERE email = ?", [$email]);
+
+            // Generate token
+            $token = bin2hex(random_bytes(32));
+            $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
+
+            db()->execute(
+                "INSERT INTO password_resets (email, token, expires_at) VALUES (?, ?, ?)",
+                [$email, $token, $expires]
+            );
+
+            // In production, send email here. For now, show the reset link.
+            $resetUrl = BASE_URL . 'auth/resetPassword?token=' . $token;
+            setFlash('success', 'Link reset password: ' . $resetUrl);
+        } else {
+            setFlash('success', 'Jika email terdaftar, link reset password telah dikirim.');
+        }
+
+        redirect('auth/forgot');
+    }
+
+    /**
+     * Reset Password - Show new password form
+     */
+    public function resetPassword() {
+        $token = trim((string) ($_GET['token'] ?? ''));
+
+        if (empty($token)) {
+            setFlash('error', 'Token tidak valid');
+            redirect('auth/login');
+        }
+
+        $reset = db()->row(
+            "SELECT email, expires_at FROM password_resets WHERE token = ?",
+            [$token]
+        );
+
+        if (!$reset) {
+            setFlash('error', 'Token tidak ditemukan atau sudah digunakan');
+            redirect('auth/login');
+        }
+
+        if (strtotime($reset['expires_at']) < time()) {
+            db()->execute("DELETE FROM password_resets WHERE token = ?", [$token]);
+            setFlash('error', 'Token sudah kedaluwarsa. Silakan minta link baru.');
+            redirect('auth/forgot');
+        }
+
+        $data = [
+            'title' => 'Reset Password - DST Recruitment',
+            'page' => 'reset-password',
+            'token' => $token,
+            'email' => $reset['email']
+        ];
+
+        $this->view('layouts/header', $data);
+        $this->view('auth/reset', $data);
+        $this->view('layouts/footer');
+    }
+
+    /**
+     * Process Reset Password
+     */
+    public function doResetPassword() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('auth/login');
+        }
+
+        requireValidCsrf();
+
+        $token = trim((string) ($_POST['token'] ?? ''));
+        $password = $_POST['password'] ?? '';
+        $confirm_password = $_POST['confirm_password'] ?? '';
+
+        if (empty($token)) {
+            setFlash('error', 'Token tidak valid');
+            redirect('auth/login');
+        }
+
+        $reset = db()->row(
+            "SELECT email, expires_at FROM password_resets WHERE token = ?",
+            [$token]
+        );
+
+        if (!$reset) {
+            setFlash('error', 'Token tidak ditemukan atau sudah digunakan');
+            redirect('auth/login');
+        }
+
+        if (strtotime($reset['expires_at']) < time()) {
+            db()->execute("DELETE FROM password_resets WHERE token = ?", [$token]);
+            setFlash('error', 'Token sudah kedaluwarsa. Silakan minta link baru.');
+            redirect('auth/forgot');
+        }
+
+        if (strlen($password) < 6) {
+            setFlash('error', 'Password baru minimal 6 karakter');
+            redirect('auth/resetPassword?token=' . $token);
+        }
+
+        if ($password !== $confirm_password) {
+            setFlash('error', 'Password tidak cocok');
+            redirect('auth/resetPassword?token=' . $token);
+        }
+
+        // Update password
+        $hashed = hashPassword($password);
+        $email = $reset['email'];
+
+        db()->execute(
+            "UPDATE users SET password = ?, updated_at = NOW() WHERE LOWER(email) = ?",
+            [$hashed, strtolower($email)]
+        );
+
+        // Delete the token
+        db()->execute("DELETE FROM password_resets WHERE token = ?", [$token]);
+
+        // Also delete any other tokens for this email
+        db()->execute("DELETE FROM password_resets WHERE email = ?", [$email]);
+
+        setFlash('success', 'Password berhasil diubah! Silakan login dengan password baru.');
+        redirect('auth/login');
     }
 }

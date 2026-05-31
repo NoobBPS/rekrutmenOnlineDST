@@ -16,6 +16,7 @@
             </div>
             <button type="submit" class="btn btn-primary btn-block">Masuk</button>
         </form>
+        <p class="auth-link"><a href="<?= BASE_URL ?>auth/forgot">Lupa Password?</a></p>
         <p class="auth-link">Belum punya akun? <a href="<?= BASE_URL ?>auth/register">Daftar di sini</a></p>
     </div>
 </div>
