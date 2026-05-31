@@ -11,7 +11,7 @@
                 <label>Email</label>
                 <input type="email" name="email" required placeholder="email@example.com">
             </div>
-            <button type="submit" class="btn btn-primary btn-block">Kirim Link Reset</button>
+            <button type="submit" class="btn btn-primary btn-block">Reset Password</button>
         </form>
         <p class="auth-link"><a href="<?= BASE_URL ?>auth/login">Kembali ke Login</a></p>
     </div>

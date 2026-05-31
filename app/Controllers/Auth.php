@@ -253,9 +253,12 @@ class Auth extends \Controller {
                 [$email, $token, $expires]
             );
 
-            // In production, send email here. For now, show the reset link.
+            // Send reset email
             $resetUrl = BASE_URL . 'auth/resetPassword?token=' . $token;
-            setFlash('success', 'Link reset password: ' . $resetUrl);
+            $this->sendResetEmail($email, $resetUrl);
+
+            setFlash('success', 'Link reset password telah dikirim ke email Anda.');
+            redirect('auth/resetPassword?token=' . $token);
         } else {
             setFlash('success', 'Jika email terdaftar, link reset password telah dikirim.');
         }
@@ -364,5 +367,36 @@ class Auth extends \Controller {
 
         setFlash('success', 'Password berhasil diubah! Silakan login dengan password baru.');
         redirect('auth/login');
+    }
+
+    /**
+     * Send password reset email
+     */
+    private function sendResetEmail(string $email, string $resetUrl): void {
+        require_once APPPATH . 'Config/Mail.php';
+
+        $subject = 'Reset Password - DST Recruitment';
+        $boundary = md5(time());
+
+        $body = "--{$boundary}\r\n";
+        $body .= "Content-Type: text/html; charset=UTF-8\r\n\r\n";
+        $body .= "<!DOCTYPE html><html><body>";
+        $body .= "<h2>Reset Password</h2>";
+        $body .= "<p>Anda telah meminta reset password untuk akun DST Recruitment.</p>";
+        $body .= "<p>Klik link di bawah untuk mengatur password baru:</p>";
+        $body .= "<p><a href=\"{$resetUrl}\" style=\"display:inline-block;padding:12px 24px;background:#0f5e5e;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;\">Reset Password</a></p>";
+        $body .= "<p>Atau salin link ini ke browser: {$resetUrl}</p>";
+        $body .= "<p>Link ini berlaku selama 1 jam.</p>";
+        $body .= "<p>Jika Anda tidak meminta reset password, abaikan email ini.</p>";
+        $body .= "<hr><p style='color:#888;font-size:12px;'>DST Recruitment - PT Digdaya Solusi Teknologi</p>";
+        $body .= "</body></html>";
+        $body .= "\r\n--{$boundary}--";
+
+        $headers = "From: " . MAIL_FROM_NAME . " <" . MAIL_FROM . ">\r\n";
+        $headers .= "Reply-To: " . MAIL_FROM . "\r\n";
+        $headers .= "MIME-Version: 1.0\r\n";
+        $headers .= "Content-Type: multipart/alternative; boundary=\"{$boundary}\"\r\n";
+
+        @mail($email, $subject, $body, $headers);
     }
 }
