@@ -4,13 +4,17 @@
  * Uses PHPMailer to send emails via Gmail SMTP
  */
 
-require_once ROOTPATH . 'vendor/phpmailer/phpmailer/src/PHPMailer.php';
-require_once ROOTPATH . 'vendor/phpmailer/phpmailer/src/SMTP.php';
-require_once ROOTPATH . 'vendor/phpmailer/phpmailer/src/Exception.php';
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\SMTP;
-use PHPMailer\PHPMailer\Exception;
+// Load PHPMailer files (use @ to suppress warnings if files don't exist)
+$phpmailerPath = ROOTPATH . 'vendor/phpmailer/phpmailer/src/';
+if (is_file($phpmailerPath . 'PHPMailer.php')) {
+    require_once $phpmailerPath . 'PHPMailer.php';
+}
+if (is_file($phpmailerPath . 'SMTP.php')) {
+    require_once $phpmailerPath . 'SMTP.php';
+}
+if (is_file($phpmailerPath . 'Exception.php')) {
+    require_once $phpmailerPath . 'Exception.php';
+}
 
 /**
  * Send email via Gmail SMTP
@@ -21,28 +25,62 @@ use PHPMailer\PHPMailer\Exception;
  * @return array{success: bool, message: string}
  */
 function sendMail(string $to, string $subject, string $htmlBody): array {
-    require_once APPPATH . 'Config/Mail.php';
+    // Load config
+    if (is_file(APPPATH . 'Config/Mail.php')) {
+        require_once APPPATH . 'Config/Mail.php';
+    }
 
-    $mailUsername = MAIL_USERNAME;
-    $mailPassword = MAIL_PASSWORD;
+    $mailUsername = defined('MAIL_USERNAME') ? MAIL_USERNAME : '';
+    $mailPassword = defined('MAIL_PASSWORD') ? MAIL_PASSWORD : '';
+    $mailFrom = defined('MAIL_FROM') && MAIL_FROM !== '' ? MAIL_FROM : $mailUsername;
+
+    $placeholderValues = ['your-email@gmail.com', 'your-app-password', 'change_me'];
+    if (
+        in_array(strtolower($mailUsername), $placeholderValues, true)
+        || in_array($mailPassword, $placeholderValues, true)
+    ) {
+        return ['success' => false, 'message' => 'SMTP credentials still use placeholder values'];
+    }
 
     if (empty($mailUsername) || empty($mailPassword)) {
         return ['success' => false, 'message' => 'SMTP credentials not configured'];
     }
 
-    $mail = new PHPMailer(true);
+    // Check if PHPMailer is available after loading config.
+    if (!class_exists('PHPMailer\\PHPMailer\\PHPMailer')) {
+        return ['success' => false, 'message' => 'PHPMailer library not available'];
+    }
 
     try {
+        $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+        $mailPort = defined('MAIL_PORT') ? (int) MAIL_PORT : 587;
+        $mailSecure = strtolower((string) (defined('MAIL_SECURE') ? MAIL_SECURE : 'tls'));
+
         $mail->isSMTP();
-        $mail->Host       = MAIL_HOST;
+        $mail->Host       = defined('MAIL_HOST') ? MAIL_HOST : 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
         $mail->Username   = $mailUsername;
         $mail->Password   = $mailPassword;
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port       = MAIL_PORT;
+        $mail->Port       = $mailPort;
         $mail->CharSet    = 'UTF-8';
+        $mail->Timeout    = defined('MAIL_TIMEOUT') ? max(1, (int) MAIL_TIMEOUT) : 20;
+        $mail->SMTPKeepAlive = false;
 
-        $mail->setFrom(MAIL_FROM, MAIL_FROM_NAME);
+        if ($mailSecure === 'ssl' || $mailPort === 465) {
+            $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
+            $mail->SMTPAutoTLS = false;
+        } elseif (in_array($mailSecure, ['none', 'false', '0', ''], true)) {
+            $mail->SMTPSecure = '';
+            $mail->SMTPAutoTLS = false;
+        } else {
+            $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->SMTPAutoTLS = true;
+        }
+
+        $mail->setFrom(
+            $mailFrom,
+            defined('MAIL_FROM_NAME') ? MAIL_FROM_NAME : 'DST Recruitment'
+        );
         $mail->addAddress($to);
 
         $mail->isHTML(true);
@@ -52,7 +90,7 @@ function sendMail(string $to, string $subject, string $htmlBody): array {
 
         $mail->send();
         return ['success' => true, 'message' => 'Email sent'];
-    } catch (Exception $e) {
-        return ['success' => false, 'message' => $mail->ErrorInfo];
+    } catch (\Throwable $e) {
+        return ['success' => false, 'message' => $e->getMessage()];
     }
 }

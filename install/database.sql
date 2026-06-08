@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS users (
     bio TEXT NULL,
     avatar VARCHAR(255) NULL,
     status ENUM('active', 'inactive') DEFAULT 'active',
+    reset_token VARCHAR(64) NULL,
+    reset_token_expires DATETIME NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -60,11 +62,13 @@ CREATE TABLE IF NOT EXISTS messages (
     id INT AUTO_INCREMENT PRIMARY KEY,
     from_user_id INT NOT NULL,
     to_user_id INT NOT NULL,
+    application_id INT NULL,
     content TEXT NOT NULL,
     is_read TINYINT(1) DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (from_user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (to_user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    FOREIGN KEY (to_user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE INDEX idx_jobs_status ON jobs(status);
@@ -74,6 +78,8 @@ CREATE INDEX idx_applications_job ON applications(job_id);
 CREATE INDEX idx_applications_status ON applications(status);
 CREATE INDEX idx_messages_from_to ON messages(from_user_id, to_user_id);
 CREATE INDEX idx_messages_to_read ON messages(to_user_id, is_read);
+CREATE INDEX idx_messages_application ON messages(application_id);
+CREATE INDEX idx_users_reset_token ON users(reset_token);
 
 -- Default HRD/Admin accounts
 -- hrd@dst.co.id / password123

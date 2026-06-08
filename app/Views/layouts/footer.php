@@ -63,6 +63,7 @@
             </span>
             <span class="mobile-bottom-nav__label"><?= h($mobileAppliedLabel) ?></span>
         </a>
+        <?php if (!$isAdmin): ?>
         <a href="<?= BASE_URL ?>chat" class="mobile-bottom-nav__item <?= $mobileActivePage === 'chat' ? 'is-active' : '' ?>" <?= $mobileActivePage === 'chat' ? 'aria-current="page"' : '' ?>>
             <span class="mobile-bottom-nav__icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none">
@@ -76,6 +77,7 @@
             <span class="nav-unread-badge" aria-hidden="true"><?= (int) $unreadCount ?></span>
             <?php endif; ?>
         </a>
+        <?php endif; ?>
         <a href="<?= BASE_URL ?>profile" class="mobile-bottom-nav__item <?= $mobileActivePage === 'profile' ? 'is-active' : '' ?>" <?= $mobileActivePage === 'profile' ? 'aria-current="page"' : '' ?>>
             <span class="mobile-bottom-nav__icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none">

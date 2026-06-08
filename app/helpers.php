@@ -3,16 +3,63 @@
  * Helper Functions
  */
 
+function dstIsLocalHost($host) {
+    $host = strtolower(trim((string) $host));
+    return in_array($host, ['localhost', '127.0.0.1', '::1'], true);
+}
+
+function dstRequestScheme() {
+    $forwardedProto = strtolower(trim(explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''))[0]));
+    if (in_array($forwardedProto, ['http', 'https'], true)) {
+        return $forwardedProto;
+    }
+
+    $cfVisitor = (string) ($_SERVER['HTTP_CF_VISITOR'] ?? '');
+    if (stripos($cfVisitor, '"scheme":"https"') !== false) {
+        return 'https';
+    }
+
+    if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+        return 'https';
+    }
+
+    if ((string) ($_SERVER['SERVER_PORT'] ?? '') === '443') {
+        return 'https';
+    }
+
+    return 'http';
+}
+
+function dstDetectedBaseUrl() {
+    $scheme = dstRequestScheme();
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
+    $basePath = rtrim($scriptDir, '/');
+
+    return $scheme . '://' . $host . ($basePath === '' ? '/' : $basePath . '/');
+}
+
 if (!defined('BASE_URL')) {
-    $baseUrlEnv = getenv('BASE_URL');
-    if (!empty($baseUrlEnv)) {
-        define('BASE_URL', rtrim($baseUrlEnv, '/') . '/');
+    $detectedBaseUrl = dstDetectedBaseUrl();
+    $baseUrlEnv = trim((string) getenv('BASE_URL'));
+
+    if ($baseUrlEnv !== '') {
+        if (!preg_match('#^https?://#i', $baseUrlEnv)) {
+            $baseUrlEnv = dstRequestScheme() . '://' . ltrim($baseUrlEnv, '/');
+        }
+
+        $configuredHost = parse_url($baseUrlEnv, PHP_URL_HOST) ?: '';
+        $requestHost = explode(':', (string) ($_SERVER['HTTP_HOST'] ?? 'localhost'))[0];
+
+        // If a local .env accidentally reaches hosting, do not generate reset
+        // links to localhost. Use the actual request host instead.
+        if (dstIsLocalHost($configuredHost) && !dstIsLocalHost($requestHost)) {
+            define('BASE_URL', $detectedBaseUrl);
+        } else {
+            define('BASE_URL', rtrim($baseUrlEnv, '/') . '/');
+        }
     } else {
-        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
-        $basePath = rtrim($scriptDir, '/');
-        define('BASE_URL', $scheme . '://' . $host . ($basePath === '' ? '/' : $basePath . '/'));
+        define('BASE_URL', $detectedBaseUrl);
     }
 }
 

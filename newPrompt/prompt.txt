@@ -1,26 +1,6 @@
-13. oh iya, kan sebelumnya sudah dibuat akun untuk 
-a. HRD
-- id: hrd@dst.co.id
-- pw: inesmonica
-b. Admin
-- id: admin.rekrutmen@dst.co.id
-- pw: AdminDst2026!
-nah tapi skrg saat ingin memasukkan akun di atas di halaman login, malah gabisa "email / password salah", 
-padahal sebelumnya bisa.. perbaiki ya agar bisa login dengan akun-akun di atas
-
-14. setelah register akun berhasil kan.. akun akan dibawa ke halaman profil.. nah saya ingin setelah registrasi akun berhasil.. maka langsung dibawa ke halaman login.. bukan ke halaman profil langsung..
-
-dan pebaiki semua error berikut
-
-Syntax error: unexpected token '$text'
-Parameter $text has no type information available.
-Parameter $candidateSkills has no type information available.
-Parameter $jobSkills has no type information available.
-Parameter $status has no type information available.
-
-Rapihkan layout di halaman profile tampilan mobile karena masih ada celah background yang terlihat di kanan (mirip warna krem) jadinya gak rapih..
-terus container yang berisi ("DST Recruitment" (di kiri), logo chat (di tengah), dan poto profile (dii kanan)) lebar containernya terlihat tidak memenuhi layar
-ke kanan.. karena jika di zoom out, maka akan terlihat celah yang tadi di kanan dan lebar container yang tidak memenuhi layar 100%
-
-Oh iya.. halaman webnya (setelah login).. saat berganti ke tab lain di browser.. pas balik lagi ke halaman e-recruitment (setelah berhasil login).. maka anehnya balik lagi ke halaman login (kaya logout otomatis..) saya ga mau itu.. buat agar walaupun web ditinggal dalam waktu yang lama.. tidak terjadi logout otomatis.. ok?
-Di chat akun user statusnya itu belum sesuai dengan status yang ditetapkan oleh HRD.. kaya misalnya tadi.. padahal HRD sudah menyeleksi lamaran user menjadi 'Interview', tapi di chat statusnya masih "terhubung dengan HRD".. belum sesuai.. nah saya ingin kamu sesuaikan status HRD di halaman seleksi pelamar.. sesuai dengan status yang tertulis di chat role akun user maupun chat HRD.. agar menjadi misalnya "Interview" dengan warna background yang sesuai dengan statusnya.. jangan lupa untuk menyamakan juga dengan status di halaman pelamar (role akun HRD).. agar di tabel tertulis juga status yang sesuai dengan tadi (misalnya Interview)
+1. untuk tampilan ruangan chat (chat/roomnya).. kalau bisa memenuhi layar ya baik di tampilan desktop maupun tampilan mobile
+2. ketika HRD ingin mulai chat kandidat dengan posisi yang berbeda.. tapi malah diarahin chatnya ke chat yang lama (sudah ada)..
+saya mau ketika HRD ingin mulai chat kandidat dengan posisi yang baru dilamar.. maka chat dan ruang chatnya juga dibuatkan yang baru
+dengan posisi yang baru / dilamar kandidat juga (posisi yang dilamar muncul di container tepatnya di bawah username pada ruang chat (chat/room)
+seperti biasanya
+3. admin itu tidak bisa chat ya (hilangkan menu chat di role admin).. yang bisa chat hanya role akun HRD dan USER

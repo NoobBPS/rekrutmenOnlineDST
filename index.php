@@ -8,9 +8,17 @@ define('BASEPATH', __DIR__ . '/system/');
 define('ROOTPATH', __DIR__ . '/');
 
 /**
- * Simple .env loader
+ * Simple .env loader.
+ *
+ * Hosting deployments sometimes upload .env.production but forget to rename it
+ * to .env. Keep .env as the primary file, then use .env.production as a safe
+ * fallback when .env is not present.
  */
 $envPath = ROOTPATH . '.env';
+if (!is_file($envPath)) {
+    $envPath = ROOTPATH . '.env.production';
+}
+
 if (is_file($envPath) && is_readable($envPath)) {
     $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {

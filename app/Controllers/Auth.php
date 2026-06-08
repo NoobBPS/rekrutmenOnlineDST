@@ -215,6 +215,47 @@ class Auth extends \Controller {
         $this->view('layouts/footer');
     }
 
+    private function ensureResetPasswordSchema(): bool {
+        try {
+            $resetTokenColumn = db()->row(
+                "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'reset_token'"
+            );
+            if (!$resetTokenColumn) {
+                db()->execute("ALTER TABLE users ADD COLUMN reset_token VARCHAR(64) NULL AFTER status");
+            }
+
+            $resetExpiresColumn = db()->row(
+                "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'reset_token_expires'"
+            );
+            if (!$resetExpiresColumn) {
+                db()->execute("ALTER TABLE users ADD COLUMN reset_token_expires DATETIME NULL AFTER reset_token");
+            }
+
+            $resetTokenIndex = db()->row(
+                "SELECT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND INDEX_NAME = 'idx_users_reset_token' LIMIT 1"
+            );
+            if (!$resetTokenIndex) {
+                db()->execute("CREATE INDEX idx_users_reset_token ON users(reset_token)");
+            }
+
+            return true;
+        } catch (\Throwable $e) {
+            error_log('Reset password schema check failed: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    private function resetPasswordUrl(string $token): string {
+        return BASE_URL . 'auth/resetPassword?token=' . rawurlencode($token);
+    }
+
+    private function canUseLocalResetFallback(): bool {
+        $host = explode(':', (string) ($_SERVER['HTTP_HOST'] ?? 'localhost'))[0];
+        $appEnv = strtolower((string) (getenv('APP_ENV') ?: 'development'));
+
+        return $appEnv !== 'production' && function_exists('dstIsLocalHost') && dstIsLocalHost($host);
+    }
+
     /**
      * Process Forgot Password - Generate reset token
      */
@@ -237,30 +278,50 @@ class Auth extends \Controller {
             redirect('auth/forgot');
         }
 
-        // Always show success message to prevent email enumeration
+        if (!$this->ensureResetPasswordSchema()) {
+            setFlash('error', 'Fitur reset password belum siap di database hosting. Jalankan migrasi forgot password atau hubungi admin.');
+            redirect('auth/forgot');
+        }
+
+        // Non-existing emails still receive a generic success message.
         $user = db()->row("SELECT user_id FROM users WHERE LOWER(email) = ?", [$email]);
 
         if ($user) {
-            // Delete old tokens for this email
-            db()->execute("DELETE FROM password_resets WHERE email = ?", [$email]);
+            // Clear old token for this user
+            db()->execute(
+                "UPDATE users SET reset_token = NULL, reset_token_expires = NULL WHERE LOWER(email) = ?",
+                [$email]
+            );
 
             // Generate token
             $token = bin2hex(random_bytes(32));
             $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
 
             db()->execute(
-                "INSERT INTO password_resets (email, token, expires_at) VALUES (?, ?, ?)",
-                [$email, $token, $expires]
+                "UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE LOWER(email) = ?",
+                [$token, $expires, $email]
             );
 
             // Send reset email
-            $resetUrl = BASE_URL . 'auth/resetPassword?token=' . $token;
-            $this->sendResetEmail($email, $resetUrl);
+            $resetUrl = $this->resetPasswordUrl($token);
+            $mailResult = $this->sendResetEmail($email, $resetUrl);
 
-            setFlash('success', 'Link reset password telah dikirim ke email Anda.');
-            redirect('auth/resetPassword?token=' . $token);
+            if (empty($mailResult['success'])) {
+                $mailMessage = $mailResult['message'] ?? 'Unknown mail error';
+                error_log('Reset email failed for ' . $email . ': ' . $mailMessage);
+
+                if ($this->canUseLocalResetFallback()) {
+                    setFlash('success', 'Mode localhost: SMTP belum dikonfigurasi, jadi halaman reset password dibuka langsung untuk testing.');
+                    redirect('auth/resetPassword?token=' . rawurlencode($token));
+                }
+
+                setFlash('error', 'Gagal mengirim link reset password. Pastikan konfigurasi SMTP hosting sudah benar.');
+                redirect('auth/forgot');
+            }
+
+            setFlash('success', 'Link reset password telah dikirim ke <strong>' . h($email) . '</strong>. Silakan cek inbox atau folder spam Anda.');
         } else {
-            setFlash('success', 'Jika email terdaftar, link reset password telah dikirim.');
+            setFlash('success', 'Jika email terdaftar, link reset password telah dikirim. Silakan cek inbox Anda.');
         }
 
         redirect('auth/forgot');
@@ -272,13 +333,18 @@ class Auth extends \Controller {
     public function resetPassword() {
         $token = trim((string) ($_GET['token'] ?? ''));
 
+        if (!$this->ensureResetPasswordSchema()) {
+            setFlash('error', 'Fitur reset password belum siap di database hosting. Jalankan migrasi forgot password atau hubungi admin.');
+            redirect('auth/login');
+        }
+
         if (empty($token)) {
             setFlash('error', 'Token tidak valid');
             redirect('auth/login');
         }
 
         $reset = db()->row(
-            "SELECT email, expires_at FROM password_resets WHERE token = ?",
+            "SELECT email, reset_token_expires FROM users WHERE reset_token = ?",
             [$token]
         );
 
@@ -287,8 +353,11 @@ class Auth extends \Controller {
             redirect('auth/login');
         }
 
-        if (strtotime($reset['expires_at']) < time()) {
-            db()->execute("DELETE FROM password_resets WHERE token = ?", [$token]);
+        if (strtotime($reset['reset_token_expires']) < time()) {
+            db()->execute(
+                "UPDATE users SET reset_token = NULL, reset_token_expires = NULL WHERE reset_token = ?",
+                [$token]
+            );
             setFlash('error', 'Token sudah kedaluwarsa. Silakan minta link baru.');
             redirect('auth/forgot');
         }
@@ -315,6 +384,11 @@ class Auth extends \Controller {
 
         requireValidCsrf();
 
+        if (!$this->ensureResetPasswordSchema()) {
+            setFlash('error', 'Fitur reset password belum siap di database hosting. Jalankan migrasi forgot password atau hubungi admin.');
+            redirect('auth/login');
+        }
+
         $token = trim((string) ($_POST['token'] ?? ''));
         $password = $_POST['password'] ?? '';
         $confirm_password = $_POST['confirm_password'] ?? '';
@@ -325,7 +399,7 @@ class Auth extends \Controller {
         }
 
         $reset = db()->row(
-            "SELECT email, expires_at FROM password_resets WHERE token = ?",
+            "SELECT email, reset_token_expires FROM users WHERE reset_token = ?",
             [$token]
         );
 
@@ -334,8 +408,11 @@ class Auth extends \Controller {
             redirect('auth/login');
         }
 
-        if (strtotime($reset['expires_at']) < time()) {
-            db()->execute("DELETE FROM password_resets WHERE token = ?", [$token]);
+        if (strtotime($reset['reset_token_expires']) < time()) {
+            db()->execute(
+                "UPDATE users SET reset_token = NULL, reset_token_expires = NULL WHERE reset_token = ?",
+                [$token]
+            );
             setFlash('error', 'Token sudah kedaluwarsa. Silakan minta link baru.');
             redirect('auth/forgot');
         }
@@ -350,20 +427,14 @@ class Auth extends \Controller {
             redirect('auth/resetPassword?token=' . $token);
         }
 
-        // Update password
+        // Update password and clear token
         $hashed = hashPassword($password);
         $email = $reset['email'];
 
         db()->execute(
-            "UPDATE users SET password = ?, updated_at = NOW() WHERE LOWER(email) = ?",
+            "UPDATE users SET password = ?, reset_token = NULL, reset_token_expires = NULL, updated_at = NOW() WHERE LOWER(email) = ?",
             [$hashed, strtolower($email)]
         );
-
-        // Delete the token
-        db()->execute("DELETE FROM password_resets WHERE token = ?", [$token]);
-
-        // Also delete any other tokens for this email
-        db()->execute("DELETE FROM password_resets WHERE email = ?", [$email]);
 
         setFlash('success', 'Password berhasil diubah! Silakan login dengan password baru.');
         redirect('auth/login');
@@ -372,31 +443,28 @@ class Auth extends \Controller {
     /**
      * Send password reset email via Gmail SMTP
      */
-    private function sendResetEmail(string $email, string $resetUrl): void {
-        try {
-            require_once APPPATH . 'helpers/mail.php';
+    private function sendResetEmail(string $email, string $resetUrl): array {
+        require_once APPPATH . 'helpers/mail.php';
 
-            $subject = 'Reset Password - DST Recruitment';
+        $safeResetUrl = h($resetUrl);
+        $subject = 'Reset Password - DST Recruitment';
 
-            $body = "<!DOCTYPE html><html><body style='font-family:Arial,sans-serif;'>";
-            $body .= "<div style='max-width:500px;margin:0 auto;padding:20px;'>";
-            $body .= "<div style='text-align:center;margin-bottom:20px;'>";
-            $body .= "<img src='" . BASE_URL . "assets/images/logoDST.png' alt='DST' style='width:60px;'>";
-            $body .= "</div>";
-            $body .= "<h2 style='color:#0f5e5e;text-align:center;'>Reset Password</h2>";
-            $body .= "<p>Anda telah meminta reset password untuk akun DST Recruitment.</p>";
-            $body .= "<p style='text-align:center;margin:30px 0;'>";
-            $body .= "<a href=\"{$resetUrl}\" style='display:inline-block;padding:14px 32px;background:#0f5e5e;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;'>Reset Password</a>";
-            $body .= "</p>";
-            $body .= "<p style='color:#666;font-size:13px;'>Atau salin link ini ke browser:<br><a href=\"{$resetUrl}\" style='color:#0f5e5e;'>{$resetUrl}</a></p>";
-            $body .= "<p style='color:#666;font-size:13px;'>Link ini berlaku selama <strong>1 jam</strong>.</p>";
-            $body .= "<hr style='border:none;border-top:1px solid #eee;margin:20px 0;'>";
-            $body .= "<p style='color:#999;font-size:12px;text-align:center;'>DST Recruitment - PT Digdaya Solusi Teknologi</p>";
-            $body .= "</div></body></html>";
+        $body = "<!DOCTYPE html><html><body style='font-family:Arial,sans-serif;'>";
+        $body .= "<div style='max-width:500px;margin:0 auto;padding:20px;'>";
+        $body .= "<div style='text-align:center;margin-bottom:20px;'>";
+        $body .= "<img src='" . BASE_URL . "assets/images/logoDST.png' alt='DST' style='width:60px;'>";
+        $body .= "</div>";
+        $body .= "<h2 style='color:#0f5e5e;text-align:center;'>Reset Password</h2>";
+        $body .= "<p>Anda telah meminta reset password untuk akun DST Recruitment.</p>";
+        $body .= "<p style='text-align:center;margin:30px 0;'>";
+        $body .= "<a href=\"{$safeResetUrl}\" style='display:inline-block;padding:14px 32px;background:#0f5e5e;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;'>Reset Password</a>";
+        $body .= "</p>";
+        $body .= "<p style='color:#666;font-size:13px;'>Atau salin link ini ke browser:<br><a href=\"{$safeResetUrl}\" style='color:#0f5e5e;'>{$safeResetUrl}</a></p>";
+        $body .= "<p style='color:#666;font-size:13px;'>Link ini berlaku selama <strong>1 jam</strong>.</p>";
+        $body .= "<hr style='border:none;border-top:1px solid #eee;margin:20px 0;'>";
+        $body .= "<p style='color:#999;font-size:12px;text-align:center;'>DST Recruitment - PT Digdaya Solusi Teknologi</p>";
+        $body .= "</div></body></html>";
 
-            sendMail($email, $subject, $body);
-        } catch (\Throwable $e) {
-            // Email failed silently
-        }
+        return sendMail($email, $subject, $body);
     }
 }

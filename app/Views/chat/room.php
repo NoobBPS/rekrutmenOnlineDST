@@ -2,6 +2,7 @@
 $partner = isset($partner) && is_array($partner) ? $partner : ['id' => 0, 'full_name' => '', 'role' => '', 'avatar' => null];
 $messages = isset($messages) && is_array($messages) ? $messages : [];
 $applicationContext = isset($application_context) && is_array($application_context) ? $application_context : [];
+$applicationId = isset($application_id) ? (int) $application_id : 0;
 $partnerAvatarUrl = avatarUrl($partner['avatar'] ?? null);
 $lastMessage = !empty($messages) ? end($messages) : null;
 $lastMessageId = is_array($lastMessage) ? (int) ($lastMessage['id'] ?? 0) : 0;
@@ -9,6 +10,20 @@ $statusKey = (string) ($applicationContext['status_key'] ?? '');
 $isStaffViewer = hasRole('hrd') || hasRole('admin');
 $chatStatusLabel = 'Terhubung dengan HRD';
 $chatStatusVariant = 'info';
+
+// Tentukan URL kembali yang kontekstual
+$backUrl = BASE_URL . 'chat';
+$backLabel = 'Kembali ke Pesan';
+if ($isStaffViewer && $applicationId > 0) {
+    $backUrl = BASE_URL . 'applications/detail/' . $applicationId;
+    $backLabel = 'Kembali ke Detail Lamaran';
+} elseif (hasRole('hrd')) {
+    $backUrl = BASE_URL . 'applications/hrd';
+    $backLabel = 'Kembali ke Pelamar';
+} elseif (hasRole('user')) {
+    $backUrl = BASE_URL . 'applications';
+    $backLabel = 'Kembali ke Lamaran Saya';
+}
 
 if ($isStaffViewer) {
     $staffLabels = [
@@ -49,7 +64,7 @@ $applicationLine = trim((string) ($applicationContext['job_title'] ?? ''));
 ?>
 <div class="chat-room">
     <div class="chat-header">
-        <a href="<?= BASE_URL ?>chat" class="back-btn" aria-label="Kembali">&larr;</a>
+        <a href="<?= h($backUrl) ?>" class="back-btn" aria-label="<?= h($backLabel) ?>" title="<?= h($backLabel) ?>">&larr;</a>
         <div class="chat-user-avatar" aria-hidden="true">
             <?php if ($partnerAvatarUrl): ?>
             <img src="<?= h($partnerAvatarUrl) ?>" class="chat-user-avatar-image" alt="">
@@ -61,7 +76,7 @@ $applicationLine = trim((string) ($applicationContext['job_title'] ?? ''));
             <strong><?= h($partner['full_name']) ?></strong>
             <span class="chat-status-badge chat-status-<?= h($chatStatusVariant) ?>"><?= h($chatStatusLabel) ?></span>
             <?php if ($applicationLine !== ''): ?>
-            <span class="user-role">Melamar posisi: <?= h($applicationLine) ?></span>
+            <span class="user-role">Posisi: <strong><?= h($applicationLine) ?></strong></span>
             <?php else: ?>
             <span class="user-role"><?= in_array(($partner['role'] ?? ''), ['hrd', 'admin'], true) ? 'HRD' : 'Kandidat' ?></span>
             <?php endif; ?>
@@ -117,10 +132,10 @@ $applicationLine = trim((string) ($applicationContext['job_title'] ?? ''));
     <form class="chat-input" id="chat-form">
         <?= csrfField() ?>
         <input type="hidden" name="to_user_id" value="<?= (int) ($partner['id'] ?? 0) ?>">
+        <input type="hidden" name="application_id" value="<?= (int) ($application_id ?? 0) ?>">
         <div class="chat-input-field">
             <div class="chat-edit-indicator" id="chat-edit-indicator" hidden>
-                <span class="chat-edit-indicator__label">Mode edit pesan aktif (hanya pesan terkini, maksimal 10 menit)</span>
-                <button type="button" class="chat-edit-cancel" id="chat-edit-cancel">Batal</button>
+                <button type="button" class="chat-edit-cancel" id="chat-edit-cancel" aria-label="Batal edit">Batal</button>
             </div>
             <textarea name="content" maxlength="1000" placeholder="Ketik pesan..." autocomplete="off" rows="2" required></textarea>
             <small class="chat-input-hint">Klik kanan (desktop) atau tekan lama (mobile) pada bubble untuk salin/edit/hapus.</small>
@@ -139,6 +154,7 @@ $applicationLine = trim((string) ($applicationContext['job_title'] ?? ''));
 (function () {
     const currentUserId = <?= (int) ($_SESSION['user_id'] ?? 0) ?>;
     const partnerId = <?= (int) ($partner['id'] ?? 0) ?>;
+    const applicationId = <?= (int) ($application_id ?? 0) ?>;
 
     const messagesContainer = document.getElementById('messages-container');
     const chatForm = document.getElementById('chat-form');
@@ -441,7 +457,8 @@ $applicationLine = trim((string) ($applicationContext['job_title'] ?? ''));
 
         isLoading = true;
         try {
-            const response = await fetch('<?= BASE_URL ?>chat/getMessages/' + partnerId + '?last_id=' + lastId, {
+            const url = '<?= BASE_URL ?>chat/getMessages/' + partnerId + '?last_id=' + lastId + '&application_id=' + applicationId;
+            const response = await fetch(url, {
                 credentials: 'same-origin'
             });
             const data = await response.json();

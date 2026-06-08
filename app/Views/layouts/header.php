@@ -15,12 +15,16 @@ $isHRD = $isLoggedIn && hasRole('hrd');
 $isAdmin = $isLoggedIn && hasRole('admin');
 $isStaff = $isHRD || $isAdmin;
 $hasMobileBottomNav = $isLoggedIn;
+$currentPage = $page ?? '';
 $bodyClasses = [];
 if ($hasMobileBottomNav) {
     $bodyClasses[] = 'has-mobile-bottom-nav';
 }
 if ($isLoggedIn) {
     $bodyClasses[] = 'is-authenticated';
+}
+if ($currentPage === 'chat-room') {
+    $bodyClasses[] = 'chat-room-page';
 }
 ?>
 <body class="<?= h(implode(' ', $bodyClasses)) ?>">
@@ -30,7 +34,6 @@ if ($isLoggedIn) {
     $routeSegments = explode('/', strtolower($currentRoute));
     $currentSection = $routeSegments[0] ?? 'dashboard';
     $currentAction = $routeSegments[1] ?? 'index';
-    $currentPage = $page ?? '';
 
     // Keep only one top-level nav item active at a time.
     $activeNavKey = 'dashboard';
@@ -79,8 +82,12 @@ if ($isLoggedIn) {
 
     <nav class="navbar">
         <div class="container nav-wrap">
+            <?php if (!$isLoggedIn): ?>
+            <a href="<?= BASE_URL ?>" class="brand">DST Recruitment <span class="brand-sep">Login</span></a>
+            <?php else: ?>
             <a href="<?= BASE_URL ?>" class="brand">DST Recruitment</a>
-            <?php if ($isLoggedIn): ?>
+            <?php endif; ?>
+            <?php if ($isLoggedIn && !$isAdmin): ?>
             <a href="<?= BASE_URL ?>chat" class="mobile-chat-shortcut <?= $activeNavKey === 'chat' ? 'is-active' : '' ?>" aria-label="Buka chat">
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M12 4C7.03 4 3 7.47 3 11.75C3 13.87 3.99 15.78 5.6 17.12L5.13 20.25L8.15 18.85C9.34 19.25 10.64 19.5 12 19.5C16.97 19.5 21 16.03 21 11.75C21 7.47 16.97 4 12 4Z" />
@@ -93,11 +100,13 @@ if ($isLoggedIn) {
             </a>
             <?php endif; ?>
 
+            <?php if ($isLoggedIn): ?>
             <button class="menu-toggle" id="menu-toggle" aria-label="Buka menu" aria-expanded="false" aria-controls="nav-menu">
                 <span class="menu-toggle__icon" aria-hidden="true">&#9776;</span>
             </button>
+            <?php endif; ?>
 
-            <?php if ($isLoggedIn): ?>
+            <?php if ($isLoggedIn && $currentPage !== 'chat-room'): ?>
             <div class="mobile-profile-dropdown dropdown" data-dropdown>
                 <button
                     type="button"
@@ -144,6 +153,7 @@ if ($isLoggedIn) {
                 <?php if (!$isStaff): ?>
                 <li><a href="<?= BASE_URL ?>applications" class="<?= $activeNavKey === 'applications' ? 'active' : '' ?>">Lamaran Saya</a></li>
                 <?php endif; ?>
+                <?php if (!$isAdmin): ?>
                 <li>
                     <a href="<?= BASE_URL ?>chat" class="nav-chat-link <?= $activeNavKey === 'chat' ? 'active' : '' ?>">
                         <span class="nav-chat-link__icon" aria-hidden="true">
@@ -159,6 +169,7 @@ if ($isLoggedIn) {
                         <span class="nav-chat-link__label">Pesan</span>
                     </a>
                 </li>
+                <?php endif; ?>
                 <li class="dropdown nav-account-dropdown" data-dropdown>
                     <button
                         type="button"

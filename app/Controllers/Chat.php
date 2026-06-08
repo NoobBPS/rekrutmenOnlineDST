@@ -5,7 +5,7 @@
 
 class Chat extends Controller {
     private const DELETED_MARKER = '__MSG_DELETED__';
-    private const EDIT_WINDOW_SECONDS = 600;
+    private const EDIT_WINDOW_SECONDS = 10;
 
     public function __construct() {
         parent::__construct();
@@ -19,37 +19,20 @@ class Chat extends Controller {
             redirect('auth/login');
         }
 
+        // Admin tidak bisa akses chat
+        if (hasRole('admin')) {
+            redirect('jobs/manage');
+        }
+
         $user_id = (int) $_SESSION['user_id'];
 
-        if (hasRole('hrd') || hasRole('admin')) {
+        if (hasRole('hrd')) {
             $this->hrdIndex($user_id);
             return;
         }
 
-        $conversations = db()->select(
-            "SELECT DISTINCT
-                    CASE WHEN m.from_user_id = ? THEN m.to_user_id ELSE m.from_user_id END as partner_id,
-                    u.full_name as partner_name, u.role, u.avatar as partner_avatar,
-                    (SELECT content FROM messages WHERE
-                        (from_user_id = ? AND to_user_id = u.user_id) OR
-                        (from_user_id = u.user_id AND to_user_id = ?)
-                     ORDER BY created_at DESC LIMIT 1) as last_message,
-                    (SELECT created_at FROM messages WHERE
-                        (from_user_id = ? AND to_user_id = u.user_id) OR
-                        (from_user_id = u.user_id AND to_user_id = ?)
-                     ORDER BY created_at DESC LIMIT 1) as last_time,
-                    (SELECT COUNT(*) FROM messages WHERE from_user_id = u.user_id AND to_user_id = ? AND is_read = 0) as unread
-             FROM messages m
-             JOIN users u ON u.user_id = CASE WHEN m.from_user_id = ? THEN m.to_user_id ELSE m.from_user_id END
-             WHERE m.from_user_id = ? OR m.to_user_id = ?
-             ORDER BY last_time DESC",
-            [$user_id, $user_id, $user_id, $user_id, $user_id, $user_id, $user_id, $user_id, $user_id]
-        );
-
-        foreach ($conversations as &$conversation) {
-            $conversation = $this->enrichConversationSummary($conversation);
-        }
-        unset($conversation);
+        // Untuk kandidat: tampilkan percakapan dikelompokkan per posisi
+        $conversations = $this->getUserConversations($user_id, 'user');
 
         $data = [
             'title' => 'Pesan - DST Recruitment',
@@ -63,32 +46,10 @@ class Chat extends Controller {
     }
 
     /**
-     * HRD Daftar Percakapan
+     * HRD Daftar Percakapan - dikelompokkan per posisi
      */
     private function hrdIndex($hrd_id) {
-        $conversations = db()->select(
-            "SELECT DISTINCT
-                    u.user_id as partner_id, u.full_name as partner_name, u.role, u.avatar as partner_avatar,
-                    (SELECT content FROM messages WHERE
-                        (from_user_id = ? AND to_user_id = u.user_id) OR
-                        (from_user_id = u.user_id AND to_user_id = ?)
-                     ORDER BY created_at DESC LIMIT 1) as last_message,
-                    (SELECT created_at FROM messages WHERE
-                        (from_user_id = ? AND to_user_id = u.user_id) OR
-                        (from_user_id = u.user_id AND to_user_id = ?)
-                     ORDER BY created_at DESC LIMIT 1) as last_time,
-                    (SELECT COUNT(*) FROM messages WHERE from_user_id = u.user_id AND to_user_id = ? AND is_read = 0) as unread
-             FROM messages m
-             JOIN users u ON u.user_id = CASE WHEN m.from_user_id = ? THEN m.to_user_id ELSE m.from_user_id END
-             WHERE u.role = 'user' AND (m.from_user_id = ? OR m.to_user_id = ?)
-             ORDER BY last_time DESC",
-            [$hrd_id, $hrd_id, $hrd_id, $hrd_id, $hrd_id, $hrd_id, $hrd_id, $hrd_id]
-        );
-
-        foreach ($conversations as &$conversation) {
-            $conversation = $this->enrichConversationSummary($conversation);
-        }
-        unset($conversation);
+        $conversations = $this->getUserConversations($hrd_id, 'hrd');
 
         $data = [
             'title' => 'Pesan - DST Recruitment',
@@ -99,6 +60,91 @@ class Chat extends Controller {
         $this->view('layouts/header', $data);
         $this->view('chat/index', $data);
         $this->view('layouts/footer');
+    }
+
+    /**
+     * Get conversations grouped by application (position)
+     */
+    private function getUserConversations(int $userId, string $role): array {
+        // Get distinct conversations, grouped by partner + application_id
+        $rows = db()->select(
+            "SELECT m.id as message_id, m.from_user_id, m.to_user_id, m.application_id,
+                    m.content, m.created_at, m.is_read,
+                    CASE WHEN m.from_user_id = ? THEN m.to_user_id ELSE m.from_user_id END as partner_id,
+                    a.status as application_status, a.cv_file,
+                    j.title as job_title, j.department, j.location
+             FROM messages m
+             LEFT JOIN applications a ON m.application_id = a.id
+             LEFT JOIN jobs j ON a.job_id = j.job_id
+             WHERE m.from_user_id = ? OR m.to_user_id = ?
+             ORDER BY m.created_at DESC",
+            [$userId, $userId, $userId]
+        );
+
+        // Group by partner + application_id
+        $grouped = [];
+        foreach ($rows as $row) {
+            $partnerId = (int) $row['partner_id'];
+            $appId = (int) ($row['application_id'] ?? 0);
+            $key = $partnerId . '_' . $appId;
+
+            if (!isset($grouped[$key])) {
+                // Get partner info
+                $partner = db()->row(
+                    "SELECT user_id as id, full_name, role, avatar FROM users WHERE user_id = ?",
+                    [$partnerId]
+                );
+
+                if (!$partner) continue;
+
+                // Count unread
+                $unread = db()->row(
+                    "SELECT COUNT(*) as cnt FROM messages
+                     WHERE from_user_id = ? AND to_user_id = ? AND is_read = 0
+                     " . ($appId > 0 ? "AND application_id = ?" : ""),
+                    $appId > 0 ? [$partnerId, $userId, $appId] : [$partnerId, $userId]
+                );
+
+                $grouped[$key] = [
+                    'partner_id' => $partnerId,
+                    'partner_name' => $partner['full_name'] ?? 'Unknown',
+                    'partner_role' => $partner['role'] ?? 'user',
+                    'partner_avatar' => $partner['avatar'] ?? null,
+                    'application_id' => $appId,
+                    'application_status' => $row['application_status'] ?? null,
+                    'job_title' => $row['job_title'] ?? null,
+                    'job_department' => $row['department'] ?? null,
+                    'job_location' => $row['location'] ?? null,
+                    'last_message' => $row['content'],
+                    'last_time' => $row['created_at'],
+                    'unread' => (int) ($unread['cnt'] ?? 0),
+                ];
+            }
+        }
+
+        $result = array_values($grouped);
+
+        // Enrich with status meta
+        foreach ($result as &$conv) {
+            $context = null;
+            if ($conv['application_id'] > 0) {
+                $context = [
+                    'application_id' => $conv['application_id'],
+                    'status_key' => $conv['application_status'] ?? '',
+                    'job_title' => $conv['job_title'] ?? '',
+                    'job_department' => $conv['job_department'] ?? '',
+                    'job_location' => $conv['job_location'] ?? '',
+                ];
+            }
+            $statusMeta = $this->buildConversationStatusMeta($context);
+            $conv['chat_status_label'] = $statusMeta['label'];
+            $conv['chat_status_variant'] = $statusMeta['variant'];
+            $conv['chat_status_detail'] = $statusMeta['detail'];
+            $conv['last_message'] = $this->previewMessage($conv['last_message'] ?? '');
+        }
+        unset($conv);
+
+        return $result;
     }
 
     /**
@@ -109,7 +155,13 @@ class Chat extends Controller {
             redirect('auth/login');
         }
 
+        if (hasRole('admin')) {
+            redirect('jobs/manage');
+        }
+
         $partner_id = (int) $partner_id;
+        $application_id = (int) ($_GET['application_id'] ?? 0);
+
         if ($partner_id <= 0) {
             redirect('chat');
         }
@@ -119,43 +171,67 @@ class Chat extends Controller {
             redirect('chat');
         }
 
+        // Determine which application to use
+        if ($application_id <= 0) {
+            // Ambil application_id dari conversation terakhir dengan partner ini
+            $latest = db()->row(
+                "SELECT application_id FROM messages
+                 WHERE (from_user_id = ? AND to_user_id = ?)
+                    OR (from_user_id = ? AND to_user_id = ?)
+                 ORDER BY id DESC LIMIT 1",
+                [(int) $_SESSION['user_id'], $partner_id, $partner_id, (int) $_SESSION['user_id']]
+            );
+            $application_id = (int) ($latest['application_id'] ?? 0);
+        }
+
         if (!hasRole('hrd') && !hasRole('admin') && !in_array((string) $partner['role'], ['hrd', 'admin'], true)) {
             setFlash('error', 'Anda hanya dapat berkomunikasi dengan HRD');
             redirect('chat');
         }
 
-        if (!$this->canAccessConversation($partner_id)) {
+        if (!$this->canAccessConversation($partner_id, $application_id)) {
             setFlash('error', 'Anda belum dapat memulai percakapan');
             redirect('chat');
         }
 
         $user_id = (int) $_SESSION['user_id'];
 
+        // Get messages filtered by application_id
+        $where = "(m.from_user_id = ? AND m.to_user_id = ?) OR (m.from_user_id = ? AND m.to_user_id = ?)";
+        $params = [$user_id, $partner_id, $partner_id, $user_id];
+
+        if ($application_id > 0) {
+            $where = "($where) AND m.application_id = ?";
+            $params[] = $application_id;
+        }
+
         $messages = db()->select(
             "SELECT m.id, m.from_user_id, m.to_user_id, m.content, m.created_at, u.full_name as sender_name
              FROM messages m
              JOIN users u ON m.from_user_id = u.user_id
-             WHERE (m.from_user_id = ? AND m.to_user_id = ?) OR (m.from_user_id = ? AND m.to_user_id = ?)
+             WHERE $where
              ORDER BY m.created_at ASC",
-            [$user_id, $partner_id, $partner_id, $user_id]
+            $params
         );
 
         db()->execute(
-            "UPDATE messages SET is_read = 1 WHERE from_user_id = ? AND to_user_id = ?",
-            [$partner_id, $user_id]
+            "UPDATE messages SET is_read = 1 WHERE from_user_id = ? AND to_user_id = ?"
+            . ($application_id > 0 ? " AND application_id = ?" : ""),
+            $application_id > 0 ? [$partner_id, $user_id, $application_id] : [$partner_id, $user_id]
         );
 
-        $latestOwnMessageId = $this->getLatestOwnMessageIdForConversation($user_id, $partner_id);
+        $latestOwnMessageId = $this->getLatestOwnMessageIdForConversation($user_id, $partner_id, $application_id);
         $messages = $this->normalizeMessages($messages, $partner_id, $latestOwnMessageId);
 
-        $applicationContext = $this->getConversationApplicationContext($partner_id, (string) ($partner['role'] ?? ''));
+        $applicationContext = $this->getApplicationContext($application_id, $partner_id, (string) ($partner['role'] ?? ''));
 
         $data = [
             'title' => 'Percakapan dengan ' . $partner['full_name'] . ' - DST Recruitment',
             'page' => 'chat-room',
             'partner' => $partner,
             'messages' => $messages,
-            'application_context' => $applicationContext
+            'application_context' => $applicationContext,
+            'application_id' => $application_id
         ];
 
         $this->view('layouts/header', $data);
@@ -176,6 +252,7 @@ class Chat extends Controller {
         }
 
         $to_user_id = (int) ($_POST['to_user_id'] ?? 0);
+        $application_id = (int) ($_POST['application_id'] ?? 0);
         $content = sanitize($_POST['content'] ?? '');
 
         if ($to_user_id <= 0 || $content === '') {
@@ -186,50 +263,67 @@ class Chat extends Controller {
             $this->json(['success' => false, 'message' => 'Pesan maksimal 1000 karakter']);
         }
 
-        if (!$this->canAccessConversation($to_user_id)) {
+        if (!$this->canAccessConversation($to_user_id, $application_id)) {
             $this->json(['success' => false, 'message' => 'Tidak dapat mengirim pesan']);
         }
 
         db()->execute(
-            "INSERT INTO messages (from_user_id, to_user_id, content) VALUES (?, ?, ?)",
-            [(int) $_SESSION['user_id'], $to_user_id, $content]
+            "INSERT INTO messages (from_user_id, to_user_id, application_id, content) VALUES (?, ?, ?, ?)",
+            [(int) $_SESSION['user_id'], $to_user_id, $application_id > 0 ? $application_id : null, $content]
         );
 
         $this->json(['success' => true, 'message' => 'Pesan terkirim']);
     }
 
     /**
-     * Mulai Percakapan (HRD only)
+     * Mulai Percakapan (HRD only) - dengan application_id
      */
-    public function start($user_id) {
+    public function start($application_id) {
         if (!hasRole('hrd') && !hasRole('admin')) {
             redirect('dashboard');
         }
 
-        $user_id = (int) $user_id;
-        if ($user_id <= 0) {
+        $application_id = (int) $application_id;
+        if ($application_id <= 0) {
             redirect('applications/hrd');
         }
 
-        $user = db()->row("SELECT user_id as id, full_name FROM users WHERE user_id = ?", [$user_id]);
-        if (!$user) {
-            redirect('applications/hrd');
-        }
-
-        $existing = db()->row(
-            "SELECT id FROM messages WHERE (from_user_id = ? AND to_user_id = ?) OR (from_user_id = ? AND to_user_id = ?)",
-            [(int) $_SESSION['user_id'], $user_id, $user_id, (int) $_SESSION['user_id']]
+        // Get application and user
+        $application = db()->row(
+            "SELECT a.id, a.user_id, u.full_name FROM applications a
+             JOIN users u ON a.user_id = u.user_id
+             WHERE a.id = ?",
+            [$application_id]
         );
 
-        if (!$existing) {
-            setFlash('success', 'Percakapan dimulai dengan ' . $user['full_name']);
+        if (!$application) {
+            redirect('applications/hrd');
         }
 
-        redirect('chat/room/' . $user_id);
+        // Untuk admin, tidak boleh chat
+        if (hasRole('admin')) {
+            redirect('jobs/manage');
+        }
+
+        $hrd_id = (int) $_SESSION['user_id'];
+        $user_id = (int) $application['user_id'];
+
+        // Check if there's already a conversation for this application
+        $existing = db()->row(
+            "SELECT id FROM messages
+             WHERE application_id = ?
+             AND ((from_user_id = ? AND to_user_id = ?) OR (from_user_id = ? AND to_user_id = ?))
+             LIMIT 1",
+            [$application_id, $hrd_id, $user_id, $user_id, $hrd_id]
+        );
+
+        // Selalu direct ke room dengan application_id - tidak reuse conversation lama
+        setFlash('success', 'Membuka percakapan dengan ' . $application['full_name']);
+        redirect('chat/room/' . $user_id . '?application_id=' . $application_id);
     }
 
     /**
-     * Get Messages (AJAX)
+     * Get Messages (AJAX) - filtered by application_id
      */
     public function getMessages($partner_id) {
         if (!isLoggedIn()) {
@@ -237,14 +331,20 @@ class Chat extends Controller {
         }
 
         $partner_id = (int) $partner_id;
+        $application_id = (int) ($_GET['application_id'] ?? 0);
         $last_id = (int) ($_GET['last_id'] ?? 0);
 
-        if ($partner_id <= 0 || !$this->canAccessConversation($partner_id)) {
+        if ($partner_id <= 0 || !$this->canAccessConversation($partner_id, $application_id)) {
             $this->json(['success' => false, 'message' => 'Akses percakapan ditolak']);
         }
 
         $where = "(m.from_user_id = ? AND m.to_user_id = ?) OR (m.from_user_id = ? AND m.to_user_id = ?)";
         $params = [(int) $_SESSION['user_id'], $partner_id, $partner_id, (int) $_SESSION['user_id']];
+
+        if ($application_id > 0) {
+            $where = "($where) AND m.application_id = ?";
+            $params[] = $application_id;
+        }
 
         if ($last_id > 0) {
             $where = "($where) AND m.id > ?";
@@ -261,11 +361,12 @@ class Chat extends Controller {
         );
 
         db()->execute(
-            "UPDATE messages SET is_read = 1 WHERE from_user_id = ? AND to_user_id = ?",
-            [$partner_id, (int) $_SESSION['user_id']]
+            "UPDATE messages SET is_read = 1 WHERE from_user_id = ? AND to_user_id = ?"
+            . ($application_id > 0 ? " AND application_id = ?" : ""),
+            $application_id > 0 ? [$partner_id, (int) $_SESSION['user_id'], $application_id] : [$partner_id, (int) $_SESSION['user_id']]
         );
 
-        $latestOwnMessageId = $this->getLatestOwnMessageIdForConversation((int) $_SESSION['user_id'], $partner_id);
+        $latestOwnMessageId = $this->getLatestOwnMessageIdForConversation((int) $_SESSION['user_id'], $partner_id, $application_id);
         $messages = $this->normalizeMessages($messages, $partner_id, $latestOwnMessageId);
 
         $this->json(['success' => true, 'messages' => $messages]);
@@ -292,10 +393,6 @@ class Chat extends Controller {
             $this->json(['success' => false, 'message' => 'Pesan maksimal 1000 karakter']);
         }
 
-        if (!$this->canAccessConversation($to_user_id)) {
-            $this->json(['success' => false, 'message' => 'Akses percakapan ditolak']);
-        }
-
         $message = db()->row(
             "SELECT id, from_user_id, to_user_id, content, created_at FROM messages WHERE id = ?",
             [$message_id]
@@ -317,9 +414,9 @@ class Chat extends Controller {
             $this->json(['success' => false, 'message' => 'Pesan yang sudah dihapus tidak dapat diedit']);
         }
 
-        $latestOwnMessageId = $this->getLatestOwnMessageIdForConversation((int) $_SESSION['user_id'], $to_user_id);
+        $latestOwnMessageId = $this->getLatestOwnMessageIdForConversation((int) $_SESSION['user_id'], $to_user_id, (int) ($message['application_id'] ?? 0));
         if (!$this->canEditMessageRules($message, $to_user_id, $latestOwnMessageId)) {
-            $this->json(['success' => false, 'message' => 'Pesan hanya bisa diedit untuk pesan terkini dalam 10 menit']);
+            $this->json(['success' => false, 'message' => 'Pesan hanya bisa diedit dalam 10 detik setelah dikirim']);
         }
 
         $updated = db()->execute(
@@ -336,11 +433,7 @@ class Chat extends Controller {
             [$message_id]
         );
 
-        if (!$refreshed) {
-            $this->json(['success' => false, 'message' => 'Pesan tidak ditemukan setelah diperbarui']);
-        }
-
-        $latestOwnMessageId = $this->getLatestOwnMessageIdForConversation((int) $_SESSION['user_id'], $to_user_id);
+        $latestOwnMessageId = $this->getLatestOwnMessageIdForConversation((int) $_SESSION['user_id'], $to_user_id, (int) ($refreshed['application_id'] ?? 0));
         $normalized = $this->normalizeMessage($refreshed, $to_user_id, $latestOwnMessageId);
 
         $this->json([
@@ -364,10 +457,6 @@ class Chat extends Controller {
 
         if ($message_id <= 0 || $to_user_id <= 0) {
             $this->json(['success' => false, 'message' => 'Data hapus pesan tidak lengkap']);
-        }
-
-        if (!$this->canAccessConversation($to_user_id)) {
-            $this->json(['success' => false, 'message' => 'Akses percakapan ditolak']);
         }
 
         $message = db()->row(
@@ -404,11 +493,7 @@ class Chat extends Controller {
             [$message_id]
         );
 
-        if (!$refreshed) {
-            $this->json(['success' => false, 'message' => 'Pesan tidak ditemukan setelah dihapus']);
-        }
-
-        $latestOwnMessageId = $this->getLatestOwnMessageIdForConversation((int) $_SESSION['user_id'], $to_user_id);
+        $latestOwnMessageId = $this->getLatestOwnMessageIdForConversation((int) $_SESSION['user_id'], $to_user_id, (int) ($refreshed['application_id'] ?? 0));
         $normalized = $this->normalizeMessage($refreshed, $to_user_id, $latestOwnMessageId);
 
         $this->json(['success' => true, 'message' => 'Pesan berhasil dihapus', 'data' => $normalized]);
@@ -421,7 +506,7 @@ class Chat extends Controller {
         );
     }
 
-    private function canAccessConversation($partner_id): bool {
+    private function canAccessConversation($partner_id, $application_id = 0): bool {
         $partner_id = (int) $partner_id;
         if ($partner_id <= 0) {
             return false;
@@ -440,7 +525,18 @@ class Chat extends Controller {
             return false;
         }
 
-        if (hasRole('hrd') || hasRole('admin')) {
+        if (hasRole('hrd')) {
+            // HRD hanya boleh chat dengan kandidat yang apply ke job miliknya
+            if ($application_id > 0) {
+                $app = db()->row(
+                    "SELECT a.id, j.created_by FROM applications a
+                     JOIN jobs j ON a.job_id = j.job_id
+                     WHERE a.id = ?",
+                    [$application_id]
+                );
+                if (!$app) return false;
+                if ((int) $app['created_by'] !== (int) $_SESSION['user_id']) return false;
+            }
             return true;
         }
 
@@ -448,12 +544,19 @@ class Chat extends Controller {
             return false;
         }
 
-        $existing = db()->row(
-            "SELECT id FROM messages WHERE (from_user_id = ? AND to_user_id = ?) OR (from_user_id = ? AND to_user_id = ?) LIMIT 1",
-            [(int) $_SESSION['user_id'], $partner_id, $partner_id, (int) $_SESSION['user_id']]
-        );
+        // Kandidat hanya bisa chat dengan HRD yang handle job yang dilamar
+        if ($application_id > 0) {
+            $existing = db()->row(
+                "SELECT id FROM messages
+                 WHERE application_id = ?
+                 AND ((from_user_id = ? AND to_user_id = ?) OR (from_user_id = ? AND to_user_id = ?))
+                 LIMIT 1",
+                [$application_id, (int) $_SESSION['user_id'], $partner_id, $partner_id, (int) $_SESSION['user_id']]
+            );
+            return !empty($existing);
+        }
 
-        return !empty($existing);
+        return true;
     }
 
     private function isDeletedContent(string $content): bool {
@@ -464,15 +567,19 @@ class Chat extends Controller {
         return $this->isDeletedContent($content) ? 'Pesan telah dihapus' : $content;
     }
 
-    private function getLatestOwnMessageIdForConversation(int $currentUserId, int $partnerId): int {
-        $row = db()->row(
-            "SELECT id FROM messages
-             WHERE from_user_id = ? AND to_user_id = ?
-             ORDER BY id DESC
-             LIMIT 1",
-            [$currentUserId, $partnerId]
-        );
+    private function getLatestOwnMessageIdForConversation(int $currentUserId, int $partnerId, int $applicationId = 0): int {
+        $sql = "SELECT id FROM messages
+                WHERE from_user_id = ? AND to_user_id = ?";
+        $params = [$currentUserId, $partnerId];
 
+        if ($applicationId > 0) {
+            $sql .= " AND application_id = ?";
+            $params[] = $applicationId;
+        }
+
+        $sql .= " ORDER BY id DESC LIMIT 1";
+
+        $row = db()->row($sql, $params);
         return (int) ($row['id'] ?? 0);
     }
 
@@ -535,26 +642,10 @@ class Chat extends Controller {
         return $normalized;
     }
 
-    private function enrichConversationSummary(array $conversation): array {
-        $conversation['last_message'] = $this->previewMessage((string) ($conversation['last_message'] ?? ''));
-        $partnerId = (int) ($conversation['partner_id'] ?? 0);
-        $partnerRole = (string) ($conversation['role'] ?? '');
-
-        $context = $partnerId > 0 ? $this->getConversationApplicationContext($partnerId, $partnerRole) : null;
-        $statusMeta = $this->buildConversationStatusMeta($context);
-
-        $conversation['chat_status_label'] = (string) ($statusMeta['label'] ?? 'Chat Dimulai');
-        $conversation['chat_status_variant'] = (string) ($statusMeta['variant'] ?? 'info');
-        $conversation['chat_status_detail'] = (string) ($statusMeta['detail'] ?? '');
-        $conversation['application_context'] = $context;
-
-        return $conversation;
-    }
-
     private function buildConversationStatusMeta(?array $applicationContext): array {
         if (empty($applicationContext)) {
             return [
-                'label' => 'Terhubung dengan HRD',
+                'label' => 'Chat Dimulai',
                 'variant' => 'info',
                 'detail' => 'Percakapan telah dimulai.'
             ];
@@ -594,47 +685,22 @@ class Chat extends Controller {
         return $meta;
     }
 
-    private function getConversationApplicationContext(int $partnerId, string $partnerRole): ?array {
-        $currentUserId = (int) ($_SESSION['user_id'] ?? 0);
-        if ($currentUserId <= 0) {
+    /**
+     * Get application context by application_id
+     */
+    private function getApplicationContext(int $applicationId, int $partnerId, string $partnerRole): ?array {
+        if ($applicationId <= 0) {
             return null;
         }
 
-        $sql = "SELECT a.id as application_id, a.status, a.cv_file, a.applied_at,
-                       j.title as job_title, j.location, j.type, j.salary_min, j.salary_max, j.department
-                FROM applications a
-                JOIN jobs j ON a.job_id = j.job_id";
-        $params = [];
-        $where = [];
-
-        if (hasRole('hrd') || hasRole('admin')) {
-            if ($partnerRole !== 'user') {
-                return null;
-            }
-
-            $where[] = "a.user_id = ?";
-            $params[] = $partnerId;
-
-            if (hasRole('hrd') && !hasRole('admin')) {
-                $where[] = "j.created_by = ?";
-                $params[] = $currentUserId;
-            }
-        } else {
-            $where[] = "a.user_id = ?";
-            $params[] = $currentUserId;
-
-            if ($partnerRole === 'hrd') {
-                $where[] = "j.created_by = ?";
-                $params[] = $partnerId;
-            }
-        }
-
-        if (empty($where)) {
-            return null;
-        }
-
-        $sql .= " WHERE " . implode(' AND ', $where) . " ORDER BY a.applied_at DESC LIMIT 1";
-        $application = db()->row($sql, $params);
+        $application = db()->row(
+            "SELECT a.id as application_id, a.status, a.cv_file, a.applied_at,
+                    j.title as job_title, j.location, j.type, j.salary_min, j.salary_max, j.department
+             FROM applications a
+             JOIN jobs j ON a.job_id = j.job_id
+             WHERE a.id = ?",
+            [$applicationId]
+        );
 
         if (!$application) {
             return null;

@@ -152,7 +152,7 @@
                 <td><?= timeAgo($app['applied_at']) ?></td>
                 <td class="action-row">
                     <a href="<?= BASE_URL ?>applications/detail/<?= (int) $app['id'] ?>" class="btn btn-sm">Detail</a>
-                    <a href="<?= BASE_URL ?>chat/start/<?= (int) $app['user_id'] ?>" class="btn btn-sm btn-secondary">Chat</a>
+                    <a href="<?= BASE_URL ?>chat/start/<?= (int) $app['id'] ?>" class="btn btn-sm btn-secondary">Chat</a>
                 </td>
             </tr>
             <?php endforeach; ?>
