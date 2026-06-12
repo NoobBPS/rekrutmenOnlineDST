@@ -90,9 +90,30 @@
     </nav>
     <?php endif; ?>
 
-    <footer class="footer">
+    <footer class="footer <?= (($page ?? '') === 'chat-room') ? 'footer-chat-page' : '' ?>">
         <div class="container">
-            <p>&copy; <?= date('Y') ?> PT Digdaya Solusi Teknologi</p>
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <h3>DST Recruitment</h3>
+                    <p>Platform rekrutmen digital PT Digdaya Solusi Teknologi. Kami menghubungkan talenta terbaik dengan peluang karir cemerlang.</p>
+                </div>
+                <div class="footer-links">
+                    <h4>Pintasan</h4>
+                    <ul>
+                        <li><a href="<?= BASE_URL ?>dashboard">Beranda</a></li>
+                        <li><a href="<?= BASE_URL ?>jobs">Lowongan</a></li>
+                        <li><a href="<?= BASE_URL ?>about">Tentang Kami</a></li>
+                    </ul>
+                </div>
+                <div class="footer-contact">
+                    <h4>Hubungi Kami</h4>
+                    <p>Email: hrd@dst.co.id</p>
+                    <p>Telepon: (021) 1234-5678</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; <?= date('Y') ?> PT Digdaya Solusi Teknologi. All rights reserved.</p>
+            </div>
         </div>
     </footer>
 

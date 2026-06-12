@@ -63,8 +63,8 @@ class Auth extends \Controller {
 
         requireValidCsrf();
         
-        $email = strtolower(trim((string) ($_POST['email'] ?? '')));
-        $password = $_POST['password'] ?? '';
+        $email = strtolower(trim((string) (isset($_POST['email']) ? $_POST['email'] : '')));
+        $password = isset($_POST['password']) ? $_POST['password'] : '';
         
         if (empty($email) || empty($password)) {
             setFlash('error', 'Email dan password wajib diisi');
@@ -76,12 +76,13 @@ class Auth extends \Controller {
             [$email]
         );
         
+        $status = isset($user['status']) ? $user['status'] : 'active';
         if (!$user || !verifyPassword($password, $user['password'])) {
             setFlash('error', 'Email atau password salah');
             redirect('auth/login');
         }
         
-        if (($user['status'] ?? 'active') === 'inactive') {
+        if ($status === 'inactive') {
             setFlash('error', 'Akun Anda dinonaktifkan');
             redirect('auth/login');
         }
@@ -99,12 +100,13 @@ class Auth extends \Controller {
         session_regenerate_id(true);
         
         setFlash('success', 'Selamat datang, ' . $user['full_name'] . '!');
+        $role = isset($user['role']) ? $user['role'] : '';
 
-        if (($user['role'] ?? '') === 'admin') {
+        if ($role === 'admin') {
             redirect('jobs/manage');
         }
 
-        if (($user['role'] ?? '') === 'hrd') {
+        if ($role === 'hrd') {
             redirect('dashboard/hrd');
         }
 
@@ -121,10 +123,10 @@ class Auth extends \Controller {
 
         requireValidCsrf();
         
-        $email = strtolower(trim((string) ($_POST['email'] ?? '')));
-        $password = $_POST['password'] ?? '';
-        $confirm_password = $_POST['confirm_password'] ?? '';
-        $full_name = sanitize($_POST['full_name'] ?? '');
+        $email = strtolower(trim((string) (isset($_POST['email']) ? $_POST['email'] : '')));
+        $password = isset($_POST['password']) ? $_POST['password'] : '';
+        $confirm_password = isset($_POST['confirm_password']) ? $_POST['confirm_password'] : '';
+        $full_name = sanitize(isset($_POST['full_name']) ? $_POST['full_name'] : '');
         
         // Validasi
         if (empty($email) || empty($password) || empty($full_name)) {
@@ -215,7 +217,7 @@ class Auth extends \Controller {
         $this->view('layouts/footer');
     }
 
-    private function ensureResetPasswordSchema(): bool {
+    private function ensureResetPasswordSchema() {
         try {
             $resetTokenColumn = db()->row(
                 "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'reset_token'"
@@ -239,21 +241,38 @@ class Auth extends \Controller {
             }
 
             return true;
-        } catch (\Throwable $e) {
+        } catch (\Exception $e) {
             error_log('Reset password schema check failed: ' . $e->getMessage());
             return false;
         }
     }
 
-    private function resetPasswordUrl(string $token): string {
+    private function resetPasswordUrl($token) {
         return BASE_URL . 'auth/resetPassword?token=' . rawurlencode($token);
     }
 
-    private function canUseLocalResetFallback(): bool {
-        $host = explode(':', (string) ($_SERVER['HTTP_HOST'] ?? 'localhost'))[0];
+    private function canUseLocalResetFallback() {
+        $hostValue = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
+        $host = explode(':', (string) $hostValue)[0];
         $appEnv = strtolower((string) (getenv('APP_ENV') ?: 'development'));
 
         return $appEnv !== 'production' && function_exists('dstIsLocalHost') && dstIsLocalHost($host);
+    }
+
+    private function canShowMailDebug() {
+        $debug = strtolower((string) (getenv('APP_DEBUG') ?: 'false'));
+
+        return in_array($debug, ['1', 'true', 'yes', 'on'], true);
+    }
+
+    private function resetMailErrorMessage($mailResult) {
+        $message = 'Gagal mengirim link reset password. Pastikan konfigurasi SMTP (Host, User, Password, Port) sudah benar di hosting.';
+
+        if ($this->canShowMailDebug() && isset($mailResult['message']) && !empty($mailResult['message'])) {
+            $message .= ' Detail: ' . (string) $mailResult['message'];
+        }
+
+        return $message;
     }
 
     /**
@@ -266,7 +285,7 @@ class Auth extends \Controller {
 
         requireValidCsrf();
 
-        $email = strtolower(trim((string) ($_POST['email'] ?? '')));
+        $email = strtolower(trim((string) (isset($_POST['email']) ? $_POST['email'] : '')));
 
         if (empty($email)) {
             setFlash('error', 'Email wajib diisi');
@@ -294,7 +313,11 @@ class Auth extends \Controller {
             );
 
             // Generate token
-            $token = bin2hex(random_bytes(32));
+            if (function_exists('random_bytes')) {
+                $token = bin2hex(random_bytes(32));
+            } else {
+                $token = bin2hex(openssl_random_pseudo_bytes(32));
+            }
             $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
 
             db()->execute(
@@ -315,7 +338,7 @@ class Auth extends \Controller {
                     redirect('auth/resetPassword?token=' . rawurlencode($token));
                 }
 
-                setFlash('error', 'Gagal mengirim link reset password. Pastikan konfigurasi SMTP hosting sudah benar.');
+                setFlash('error', $this->resetMailErrorMessage($mailResult));
                 redirect('auth/forgot');
             }
 
@@ -331,7 +354,7 @@ class Auth extends \Controller {
      * Reset Password - Show new password form
      */
     public function resetPassword() {
-        $token = trim((string) ($_GET['token'] ?? ''));
+        $token = trim((string) (isset($_GET['token']) ? $_GET['token'] : ''));
 
         if (!$this->ensureResetPasswordSchema()) {
             setFlash('error', 'Fitur reset password belum siap di database hosting. Jalankan migrasi forgot password atau hubungi admin.');
@@ -389,9 +412,9 @@ class Auth extends \Controller {
             redirect('auth/login');
         }
 
-        $token = trim((string) ($_POST['token'] ?? ''));
-        $password = $_POST['password'] ?? '';
-        $confirm_password = $_POST['confirm_password'] ?? '';
+        $token = trim((string) (isset($_POST['token']) ? $_POST['token'] : ''));
+        $password = isset($_POST['password']) ? $_POST['password'] : '';
+        $confirm_password = isset($_POST['confirm_password']) ? $_POST['confirm_password'] : '';
 
         if (empty($token)) {
             setFlash('error', 'Token tidak valid');
@@ -443,7 +466,7 @@ class Auth extends \Controller {
     /**
      * Send password reset email via Gmail SMTP
      */
-    private function sendResetEmail(string $email, string $resetUrl): array {
+    private function sendResetEmail($email, $resetUrl) {
         require_once APPPATH . 'helpers/mail.php';
 
         $safeResetUrl = h($resetUrl);

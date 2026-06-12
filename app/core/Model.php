@@ -8,49 +8,49 @@ class Model {
      * Database host (IP or hostname)
      * @var string
      */
-    private string $host;
+    private $host;
 
     /**
      * Database name
      * @var string
      */
-    private string $db_name;
+    private $db_name;
 
     /**
      * Database username
      * @var string
      */
-    private string $username;
+    private $username;
 
     /**
      * Database password
      * @var string
      */
-    private string $password;
+    private $password;
 
     /**
      * PDO connection instance
      * @var ?\PDO
      */
-    private ?PDO $conn = null;
+    private $conn = null;
 
     /**
      * Database port (default 3306)
      * @var string
      */
-    private string $port;
+    private $port;
 
     /**
      * Optional placeholders used by some callers/tools - declared to avoid undefined property inspections
      * @var ?string
      */
-    protected ?string $sql = null;
+    protected $sql = null;
 
     /**
      * Optional table name placeholder
      * @var ?string
      */
-    protected ?string $table = null;
+    protected $table = null;
     
     public function __construct() {
     $this->host = getenv('DB_HOST') ?: '127.0.0.1';

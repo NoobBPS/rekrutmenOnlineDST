@@ -65,7 +65,7 @@ $decision_saw_display = isset($decision_saw_display) && is_array($decision_saw_d
             <?php endif; ?>
             <?php endif; ?>
             <?php if (hasRole('hrd')): ?>
-            <a href="<?= BASE_URL ?>chat/start/<?= (int) ($application['user_id'] ?? 0) ?>" class="btn btn-sm btn-primary mt-8">Mulai Chat Kandidat</a>
+            <a href="<?= BASE_URL ?>chat/start/<?= (int) ($application['id'] ?? 0) ?>" class="btn btn-sm btn-primary mt-8">Mulai Chat Kandidat</a>
             <?php endif; ?>
         </div>
     </div>

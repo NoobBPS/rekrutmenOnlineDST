@@ -4,8 +4,8 @@
  */
 
 class Chat extends Controller {
-    private const DELETED_MARKER = '__MSG_DELETED__';
-    private const EDIT_WINDOW_SECONDS = 10;
+    const DELETED_MARKER = '__MSG_DELETED__';
+    const EDIT_WINDOW_SECONDS = 10;
 
     public function __construct() {
         parent::__construct();
@@ -65,7 +65,7 @@ class Chat extends Controller {
     /**
      * Get conversations grouped by application (position)
      */
-    private function getUserConversations(int $userId, string $role): array {
+    private function getUserConversations($userId, $role) {
         // Get distinct conversations, grouped by partner + application_id
         $rows = db()->select(
             "SELECT m.id as message_id, m.from_user_id, m.to_user_id, m.application_id,
@@ -172,16 +172,17 @@ class Chat extends Controller {
         }
 
         // Determine which application to use
+        // JIKA application_id tidak dikirim, cari yang paling baru,
+        // TAPI fitur HRD::start akan selalu mengirimkan application_id spesifik.
         if ($application_id <= 0) {
-            // Ambil application_id dari conversation terakhir dengan partner ini
             $latest = db()->row(
-                "SELECT application_id FROM messages
-                 WHERE (from_user_id = ? AND to_user_id = ?)
-                    OR (from_user_id = ? AND to_user_id = ?)
+                "SELECT application_id FROM messages 
+                 WHERE (from_user_id = ? AND to_user_id = ?) 
+                    OR (from_user_id = ? AND to_user_id = ?) 
                  ORDER BY id DESC LIMIT 1",
                 [(int) $_SESSION['user_id'], $partner_id, $partner_id, (int) $_SESSION['user_id']]
             );
-            $application_id = (int) ($latest['application_id'] ?? 0);
+            $application_id = (int) (isset($latest['application_id']) ? $latest['application_id'] : 0);
         }
 
         if (!hasRole('hrd') && !hasRole('admin') && !in_array((string) $partner['role'], ['hrd', 'admin'], true)) {
@@ -251,9 +252,9 @@ class Chat extends Controller {
             $this->json(['success' => false, 'message' => 'Token keamanan tidak valid']);
         }
 
-        $to_user_id = (int) ($_POST['to_user_id'] ?? 0);
-        $application_id = (int) ($_POST['application_id'] ?? 0);
-        $content = sanitize($_POST['content'] ?? '');
+        $to_user_id = (int) (isset($_POST['to_user_id']) ? $_POST['to_user_id'] : 0);
+        $application_id = (int) (isset($_POST['application_id']) ? $_POST['application_id'] : 0);
+        $content = sanitize(isset($_POST['content']) ? $_POST['content'] : '');
 
         if ($to_user_id <= 0 || $content === '') {
             $this->json(['success' => false, 'message' => 'Data tidak lengkap']);
@@ -288,7 +289,11 @@ class Chat extends Controller {
             redirect('applications/hrd');
         }
 
-        // Get application and user
+        // Blokir akses Admin untuk mulai chat
+        if (hasRole('admin')) {
+            redirect('jobs/manage');
+        }
+
         $application = db()->row(
             "SELECT a.id, a.user_id, u.full_name FROM applications a
              JOIN users u ON a.user_id = u.user_id
@@ -300,24 +305,10 @@ class Chat extends Controller {
             redirect('applications/hrd');
         }
 
-        // Untuk admin, tidak boleh chat
-        if (hasRole('admin')) {
-            redirect('jobs/manage');
-        }
-
         $hrd_id = (int) $_SESSION['user_id'];
         $user_id = (int) $application['user_id'];
 
-        // Check if there's already a conversation for this application
-        $existing = db()->row(
-            "SELECT id FROM messages
-             WHERE application_id = ?
-             AND ((from_user_id = ? AND to_user_id = ?) OR (from_user_id = ? AND to_user_id = ?))
-             LIMIT 1",
-            [$application_id, $hrd_id, $user_id, $user_id, $hrd_id]
-        );
-
-        // Selalu direct ke room dengan application_id - tidak reuse conversation lama
+        // Selalu direct ke room dengan application_id spesifik agar chat terpisah per posisi
         setFlash('success', 'Membuka percakapan dengan ' . $application['full_name']);
         redirect('chat/room/' . $user_id . '?application_id=' . $application_id);
     }
@@ -416,7 +407,7 @@ class Chat extends Controller {
 
         $latestOwnMessageId = $this->getLatestOwnMessageIdForConversation((int) $_SESSION['user_id'], $to_user_id, (int) ($message['application_id'] ?? 0));
         if (!$this->canEditMessageRules($message, $to_user_id, $latestOwnMessageId)) {
-            $this->json(['success' => false, 'message' => 'Pesan hanya bisa diedit dalam 10 detik setelah dikirim']);
+            $this->json(['success' => false, 'message' => 'Pesan tidak dapat diedit saat ini.']);
         }
 
         $updated = db()->execute(
@@ -611,7 +602,7 @@ class Chat extends Controller {
         }
 
         $age = time() - $createdAt;
-        return $age >= 0 && $age <= self::EDIT_WINDOW_SECONDS;
+        return $age >= 0; // Remove time limit constraint
     }
 
     private function normalizeMessage(array $message, int $partnerId, int $latestOwnMessageId): array {
@@ -642,7 +633,7 @@ class Chat extends Controller {
         return $normalized;
     }
 
-    private function buildConversationStatusMeta(?array $applicationContext): array {
+    private function buildConversationStatusMeta($applicationContext): array {
         if (empty($applicationContext)) {
             return [
                 'label' => 'Chat Dimulai',
@@ -688,7 +679,7 @@ class Chat extends Controller {
     /**
      * Get application context by application_id
      */
-    private function getApplicationContext(int $applicationId, int $partnerId, string $partnerRole): ?array {
+    private function getApplicationContext(int $applicationId, int $partnerId, string $partnerRole) {
         if ($applicationId <= 0) {
             return null;
         }

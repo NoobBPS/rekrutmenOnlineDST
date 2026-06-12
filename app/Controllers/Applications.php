@@ -210,7 +210,9 @@ class Applications extends \Controller {
                     return strcmp((string) $right['applied_at'], (string) $left['applied_at']);
                 }
 
-                return $leftRank <=> $rightRank;
+                if ($leftRank < $rightRank) return -1;
+                if ($leftRank > $rightRank) return 1;
+                return 0;
             });
         }
         
@@ -218,14 +220,14 @@ class Applications extends \Controller {
         $jobs = db()->select("SELECT job_id as id, title FROM jobs WHERE status = 'open' ORDER BY title");
         
         // Hitung statistik per status
-        $stats = [
+        $stats = array(
             'all' => db()->count('applications', "1=1"),
             'pending' => db()->count('applications', "status = 'pending'"),
             'screening' => db()->count('applications', "status = 'screening'"),
             'interview' => db()->count('applications', "status = 'interview'"),
             'accepted' => db()->count('applications', "status = 'accepted'"),
             'rejected' => db()->count('applications', "status = 'rejected'")
-        ];
+        );
         
         $data = [
             'title' => 'Daftar Pelamar - DST Recruitment',
@@ -258,16 +260,16 @@ class Applications extends \Controller {
 
         requireValidCsrf();
 
-        $job_id = intval($_POST['job_id'] ?? 0);
-        $target_status = sanitize($_POST['target_status'] ?? 'accepted');
-        $allowed_target = ['screening', 'interview', 'accepted'];
+        $job_id = intval(isset($_POST['job_id']) ? $_POST['job_id'] : 0);
+        $target_status = sanitize(isset($_POST['target_status']) ? $_POST['target_status'] : 'accepted');
+        $allowed_target = array('screening', 'interview', 'accepted');
 
         if ($job_id <= 0) {
             setFlash('error', 'Posisi tidak valid untuk rekomendasi SAW');
             redirect('applications/hrd');
         }
 
-        if (!in_array($target_status, $allowed_target, true)) {
+        if (!in_array($target_status, $allowed_target)) {
             setFlash('error', 'Status rekomendasi tidak valid');
             redirect('applications/hrd?job_id=' . $job_id);
         }
@@ -377,10 +379,10 @@ class Applications extends \Controller {
 
         requireValidCsrf();
         
-        $application_id = intval($_POST['application_id'] ?? 0);
-        $status = sanitize($_POST['status'] ?? '');
-        $notes = sanitize($_POST['notes'] ?? '');
-        $decision_reason = sanitize($_POST['decision_reason'] ?? '');
+        $application_id = intval(isset($_POST['application_id']) ? $_POST['application_id'] : 0);
+        $status = sanitize(isset($_POST['status']) ? $_POST['status'] : '');
+        $notes = sanitize(isset($_POST['notes']) ? $_POST['notes'] : '');
+        $decision_reason = sanitize(isset($_POST['decision_reason']) ? $_POST['decision_reason'] : '');
         
         // Validasi status
         $allowed_status = ['pending', 'screening', 'interview', 'accepted', 'rejected'];
@@ -779,7 +781,9 @@ class Applications extends \Controller {
                     return strcmp((string) ($left['applied_at'] ?? ''), (string) ($right['applied_at'] ?? ''));
                 }
 
-                return $rightScore <=> $leftScore;
+            if ($rightScore < $leftScore) return -1;
+            if ($rightScore > $leftScore) return 1;
+            return 0;
             });
 
             $rank = 1;
@@ -1236,7 +1240,7 @@ class Applications extends \Controller {
      * @param string $path Absolute path
      * @return string
      */
-    private function extractTextFromCvFile(string $path): string {
+    private function extractTextFromCvFile($path) {
         $path = (string) $path;
         if ($path === '' || !is_file($path)) {
             return '';
@@ -1283,7 +1287,7 @@ class Applications extends \Controller {
      * @param string $binary Raw file contents
      * @return string
      */
-    private function extractTextFromPdf(string $binary): string {
+    private function extractTextFromPdf($binary) {
         $binary = (string) $binary;
         if ($binary === '') {
             return '';
@@ -1319,7 +1323,7 @@ class Applications extends \Controller {
      * @param string $text Raw literal string from PDF content stream
      * @return string Decoded plain text
      */
-    private function decodePdfLiteralString(string $text): string {
+    private function decodePdfLiteralString($text) {
         $text = str_replace(
             ['\\\\', '\\(', '\\)', '\\n', '\\r', '\\t', '\\b', '\\f'],
             ['\\', '(', ')', "\n", "\r", "\t", ' ', ' '],

@@ -83,7 +83,11 @@ if ($currentPage === 'chat-room') {
     <nav class="navbar">
         <div class="container nav-wrap">
             <?php if (!$isLoggedIn): ?>
-            <a href="<?= BASE_URL ?>" class="brand">DST Recruitment <span class="brand-sep">Login</span></a>
+            <div class="guest-nav">
+                <a href="<?= BASE_URL ?>auth/login" class="guest-login-btn">Login</a>
+                <a href="<?= BASE_URL ?>" class="brand mx-auto text-center">DST Recruitment</a>
+                <a href="<?= BASE_URL ?>auth/register" class="btn btn-primary guest-register-btn">Daftar</a>
+            </div>
             <?php else: ?>
             <a href="<?= BASE_URL ?>" class="brand">DST Recruitment</a>
             <?php endif; ?>
@@ -185,11 +189,6 @@ if ($currentPage === 'chat-room') {
                         <a href="<?= BASE_URL ?>auth/logout">Logout</a>
                     </div>
                 </li>
-            </ul>
-            <?php else: ?>
-            <ul class="nav-menu" id="nav-menu">
-                <li><a href="<?= BASE_URL ?>auth/login">Login</a></li>
-                <li><a href="<?= BASE_URL ?>auth/register" class="btn btn-primary">Daftar</a></li>
             </ul>
             <?php endif; ?>
         </div>

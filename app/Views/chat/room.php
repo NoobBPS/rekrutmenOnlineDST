@@ -135,10 +135,10 @@ $applicationLine = trim((string) ($applicationContext['job_title'] ?? ''));
         <input type="hidden" name="application_id" value="<?= (int) ($application_id ?? 0) ?>">
         <div class="chat-input-field">
             <div class="chat-edit-indicator" id="chat-edit-indicator" hidden>
-                <button type="button" class="chat-edit-cancel" id="chat-edit-cancel" aria-label="Batal edit">Batal</button>
+                <span class="chat-edit-label">✏️ Mode Edit</span>
             </div>
             <textarea name="content" maxlength="1000" placeholder="Ketik pesan..." autocomplete="off" rows="2" required></textarea>
-            <small class="chat-input-hint">Klik kanan (desktop) atau tekan lama (mobile) pada bubble untuk salin/edit/hapus.</small>
+            <small class="chat-input-hint">Klik kanan (desktop) atau tekan lama (mobile) pada pesan untuk opsi.</small>
         </div>
         <button type="submit" class="btn btn-primary chat-send-btn" aria-label="Kirim pesan">&gt;</button>
     </form>
@@ -162,7 +162,6 @@ $applicationLine = trim((string) ($applicationContext['job_title'] ?? ''));
     const csrfTokenInput = chatForm.querySelector('input[name="csrf_token"]');
     const hintElement = chatForm.querySelector('.chat-input-hint');
     const editIndicator = document.getElementById('chat-edit-indicator');
-    const editCancelButton = document.getElementById('chat-edit-cancel');
     const sendButton = chatForm.querySelector('button[type="submit"]');
     const contextMenu = document.getElementById('message-context-menu');
     const contextEditItem = document.getElementById('context-edit-item');
@@ -331,20 +330,26 @@ $applicationLine = trim((string) ($applicationContext['job_title'] ?? ''));
             return;
         }
 
-        if (messageElement.dataset.own !== '1' || messageElement.dataset.isDeleted === '1') {
+        // Deleted messages: only allow copy of placeholder text — skip menu entirely
+        if (messageElement.dataset.isDeleted === '1') {
             return;
         }
 
+        const isOwn = messageElement.dataset.own === '1';
+        const canEdit = isOwn && messageElement.dataset.canEdit === '1';
+        const canDelete = isOwn && messageElement.dataset.canDelete === '1';
+
         contextTargetMessage = messageElement;
 
-        const canEdit = messageElement.dataset.canEdit === '1';
-        const canDelete = messageElement.dataset.canDelete === '1';
+        // Copy always visible
+        // Edit: only own messages
         if (contextEditItem) {
-            contextEditItem.hidden = false;
+            contextEditItem.hidden = !isOwn;
             contextEditItem.disabled = !canEdit;
         }
+        // Delete: only own messages
         if (contextDeleteItem) {
-            contextDeleteItem.hidden = false;
+            contextDeleteItem.hidden = !isOwn;
             contextDeleteItem.disabled = !canDelete;
         }
 
@@ -479,7 +484,7 @@ $applicationLine = trim((string) ($applicationContext['job_title'] ?? ''));
             return;
         }
         messageInput.style.height = 'auto';
-        messageInput.style.height = Math.min(messageInput.scrollHeight, 160) + 'px';
+        messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
     }
 
     function isMobileChatMode() {
@@ -507,22 +512,25 @@ $applicationLine = trim((string) ($applicationContext['job_title'] ?? ''));
         });
     }
 
-    if (editCancelButton) {
-        editCancelButton.addEventListener('click', function () {
-            clearEditMode();
-            messageInput.value = '';
-            resizeInput();
-            messageInput.focus();
+    // Cancel edit mode with Escape key
+    if (messageInput) {
+        messageInput.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && editingMessageId > 0) {
+                event.preventDefault();
+                clearEditMode();
+                messageInput.value = '';
+                resizeInput();
+            }
         });
     }
 
     messagesContainer.addEventListener('contextmenu', function (event) {
         const messageElement = event.target.closest('.message[data-id]');
-        if (!messageElement) {
+        if (!messageElement || messageElement.dataset.system === '1') {
             return;
         }
-        if (messageElement.dataset.own !== '1' || messageElement.dataset.system === '1' || messageElement.dataset.isDeleted === '1') {
-            closeContextMenu();
+        // Block context menu on already-deleted messages
+        if (messageElement.dataset.isDeleted === '1') {
             return;
         }
         event.preventDefault();
@@ -532,7 +540,7 @@ $applicationLine = trim((string) ($applicationContext['job_title'] ?? ''));
 
     messagesContainer.addEventListener('touchstart', function (event) {
         const messageElement = event.target.closest('.message[data-id]');
-        if (!messageElement || messageElement.dataset.system === '1' || messageElement.dataset.own !== '1' || messageElement.dataset.isDeleted === '1') {
+        if (!messageElement || messageElement.dataset.system === '1' || messageElement.dataset.isDeleted === '1') {
             return;
         }
         if (!event.touches || event.touches.length === 0) {

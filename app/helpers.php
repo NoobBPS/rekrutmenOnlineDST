@@ -9,7 +9,8 @@ function dstIsLocalHost($host) {
 }
 
 function dstRequestScheme() {
-    $forwardedProto = strtolower(trim(explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''))[0]));
+    $valProto = isset($_SERVER['HTTP_X_FORWARDED_PROTO']) ? $_SERVER['HTTP_X_FORWARDED_PROTO'] : '';
+    $forwardedProto = strtolower(trim(explode(',', (string) $valProto)[0]));
     if (in_array($forwardedProto, ['http', 'https'], true)) {
         return $forwardedProto;
     }
@@ -23,7 +24,7 @@ function dstRequestScheme() {
         return 'https';
     }
 
-    if ((string) ($_SERVER['SERVER_PORT'] ?? '') === '443') {
+    if ((string) (isset($_SERVER['SERVER_PORT']) ? $_SERVER['SERVER_PORT'] : '') === '443') {
         return 'https';
     }
 
@@ -32,8 +33,8 @@ function dstRequestScheme() {
 
 function dstDetectedBaseUrl() {
     $scheme = dstRequestScheme();
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
+    $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
+    $scriptDir = str_replace('\\', '/', dirname(isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '/'));
     $basePath = rtrim($scriptDir, '/');
 
     return $scheme . '://' . $host . ($basePath === '' ? '/' : $basePath . '/');
@@ -49,11 +50,14 @@ if (!defined('BASE_URL')) {
         }
 
         $configuredHost = parse_url($baseUrlEnv, PHP_URL_HOST) ?: '';
-        $requestHost = explode(':', (string) ($_SERVER['HTTP_HOST'] ?? 'localhost'))[0];
+        $requestHost = explode(':', (string) (isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost'))[0];
 
         // If a local .env accidentally reaches hosting, do not generate reset
         // links to localhost. Use the actual request host instead.
-        if (dstIsLocalHost($configuredHost) && !dstIsLocalHost($requestHost)) {
+        // Also, if the request host doesn't match the configured host (e.g. www vs non-www),
+        // use the detected host to prevent CORS and session loss issues.
+        if ((dstIsLocalHost($configuredHost) && !dstIsLocalHost($requestHost)) || 
+            (!empty($requestHost) && strcasecmp($configuredHost, $requestHost) !== 0)) {
             define('BASE_URL', $detectedBaseUrl);
         } else {
             define('BASE_URL', rtrim($baseUrlEnv, '/') . '/');
@@ -97,7 +101,7 @@ function hasRole($role) {
 }
 
 function getUserId() {
-    return $_SESSION['user_id'] ?? null;
+    return isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
 }
 
 function setFlash($type, $message) {
@@ -105,14 +109,18 @@ function setFlash($type, $message) {
 }
 
 function getFlash() {
-    $flash = $_SESSION['flash'] ?? [];
+    $flash = isset($_SESSION['flash']) ? $_SESSION['flash'] : array();
     unset($_SESSION['flash']);
     return $flash;
 }
 
 function csrfToken() {
     if (empty($_SESSION[CSRF_SESSION_KEY])) {
-        $_SESSION[CSRF_SESSION_KEY] = bin2hex(random_bytes(32));
+        if (function_exists('random_bytes')) {
+            $_SESSION[CSRF_SESSION_KEY] = bin2hex(random_bytes(32));
+        } else {
+            $_SESSION[CSRF_SESSION_KEY] = bin2hex(openssl_random_pseudo_bytes(32));
+        }
     }
     return $_SESSION[CSRF_SESSION_KEY];
 }
@@ -287,5 +295,5 @@ function statusLabel($status) {
         'rejected' => '<span class="badge badge-danger">Ditolak</span>',
     ];
 
-    return $labels[$status] ?? h($status);
+    return isset($labels[$status]) ? $labels[$status] : h($status);
 }
