@@ -1,44 +1,34 @@
-<?php namespace App\Controllers;
+<?php
+namespace App\Controllers;
 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\SMTP;
-use PHPMailer\PHPMailer\Exception;
+use App\Controllers\BaseController;
 
 class Kirim_email extends BaseController
 {
+    // Show a simple form for sending a test email (optional view)
     public function index()
     {
-        return view('welcome_message');
+        // For quick testing you can directly call send() via POST
+        return view('kirim_email_form');
     }
-    
+
+    // Process the form and send the email using the sendMail helper
     public function send()
     {
-        $mail = new PHPMailer(true);
+        // Retrieve POST data (add validation as needed)
+        $to      = $this->input->post('email');
+        $subject = $this->input->post('subject') ?? 'Test Email';
+        $body    = $this->input->post('message') ?? 'Hello from DST Recruitment';
 
-        try {
-    //Server settings
-    $mail->SMTPDebug = SMTP::DEBUG_SERVER;                      //Enable verbose debug output
-    $mail->isSMTP();                                            //Send using SMTP
-    $mail->Host       = 'smtp.googlemail.com';                     //Set the SMTP server to send through
-    $mail->SMTPAuth   = true;                                   //Enable SMTP authentication
-    $mail->Username   = 'emailpenerima@gmail.com';                     //SMTP username
-    $mail->Password   = 'password';                               //SMTP password
-    $mail->SMTPSecure = 'ssl';            //Enable implicit TLS encryption
-    $mail->Port       = 465;                                    //TCP port to connect to; use 587 if you have set `SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS`
+        // Use the existing helper (app/helpers/mail.php)
+        $result = sendMail($to, $subject, $body);
 
-    //Recipients
-    $mail->setFrom('emailpengirim@gmail.com', 'Namapengirim');
-    $mail->addAddress('brianphilipsumarauw123456789@gmail.com', 'Bryan');     //Add a recipient            //Name is optional
-    $mail->addReplyTo('rcod0101@gmail.com', 'Information');
-
-    //Content
-    $mail->isHTML(true);                                  //Set email format to HTML
-    $mail->Subject = 'Here is the subject';
-    $mail->Body    = 'This is the HTML message body <b>in bold!</b>';
-
-    $mail->send();
-    echo 'Message has been sent';
-} catch (Exception $e) {
-    echo "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
-}
+        if ($result['success']) {
+            setFlash('success', 'Email berhasil dikirim!');
+        } else {
+            setFlash('error', 'Gagal mengirim email: ' . $result['message']);
+        }
+        redirect('kirim_email');
     }
+}
+?>

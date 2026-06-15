@@ -446,7 +446,7 @@ class Auth extends \Controller {
         $body = "<!DOCTYPE html><html><body style='font-family:Arial,sans-serif;'>";
         $body .= "<div style='max-width:500px;margin:0 auto;padding:20px;'>";
         $body .= "<div style='text-align:center;margin-bottom:20px;'>";
-        $body .= "<img src='" . BASE_URL . "assets/images/logoDST.png' alt='DST' style='width:60px;'>";
+        $body .= "<img src='cid:logo_dst' alt='DST' style='width:60px;'>";
         $body .= "</div>";
         $body .= "<h2 style='color:#0f5e5e;text-align:center;'>Reset Password</h2>";
         $body .= "<p>Anda telah meminta reset password untuk akun DST Recruitment.</p>";

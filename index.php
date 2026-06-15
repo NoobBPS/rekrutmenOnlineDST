@@ -30,7 +30,7 @@ if (is_file($envPath) && is_readable($envPath)) {
         [$key, $value] = array_pad(explode('=', $line, 2), 2, '');
         $key = trim($key);
         $value = trim($value, " \t\n\r\0\x0B\"'");
-        if ($key !== '' && getenv($key) === false) {
+        if ($key !== '') {
             putenv($key . '=' . $value);
             $_ENV[$key] = $value;
         }
