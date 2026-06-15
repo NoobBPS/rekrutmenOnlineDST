@@ -219,27 +219,19 @@ class Auth extends \Controller {
 
     private function ensureResetPasswordSchema() {
         try {
-            $resetTokenColumn = db()->row(
-                "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'reset_token'"
+            $tableExists = db()->row(
+                "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user_token'"
             );
-            if (!$resetTokenColumn) {
-                db()->execute("ALTER TABLE users ADD COLUMN reset_token VARCHAR(64) NULL AFTER status");
+            if (!$tableExists) {
+                db()->execute("
+                    CREATE TABLE user_token (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        email VARCHAR(255) NOT NULL,
+                        token VARCHAR(255) NOT NULL,
+                        date_created INT NOT NULL
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                ");
             }
-
-            $resetExpiresColumn = db()->row(
-                "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'reset_token_expires'"
-            );
-            if (!$resetExpiresColumn) {
-                db()->execute("ALTER TABLE users ADD COLUMN reset_token_expires DATETIME NULL AFTER reset_token");
-            }
-
-            $resetTokenIndex = db()->row(
-                "SELECT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND INDEX_NAME = 'idx_users_reset_token' LIMIT 1"
-            );
-            if (!$resetTokenIndex) {
-                db()->execute("CREATE INDEX idx_users_reset_token ON users(reset_token)");
-            }
-
             return true;
         } catch (\Exception $e) {
             error_log('Reset password schema check failed: ' . $e->getMessage());
@@ -248,7 +240,7 @@ class Auth extends \Controller {
     }
 
     private function resetPasswordUrl($token) {
-        return BASE_URL . 'auth/resetPassword?token=' . rawurlencode($token);
+        return BASE_URL . 'auth/resetPassword?email=' . rawurlencode($_POST['email']) . '&token=' . rawurlencode($token);
     }
 
     private function canUseLocalResetFallback() {
@@ -303,26 +295,25 @@ class Auth extends \Controller {
         }
 
         // Non-existing emails still receive a generic success message.
-        $user = db()->row("SELECT user_id FROM users WHERE LOWER(email) = ?", [$email]);
+        $user = db()->row("SELECT user_id, status FROM users WHERE LOWER(email) = ?", [$email]);
 
         if ($user) {
-            // Clear old token for this user
-            db()->execute(
-                "UPDATE users SET reset_token = NULL, reset_token_expires = NULL WHERE LOWER(email) = ?",
-                [$email]
-            );
-
-            // Generate token
-            if (function_exists('random_bytes')) {
-                $token = bin2hex(random_bytes(32));
-            } else {
-                $token = bin2hex(openssl_random_pseudo_bytes(32));
+            if (($user['status'] ?? 'active') === 'inactive') {
+                setFlash('error', 'Email belum diaktivasi atau dinonaktifkan!');
+                redirect('auth/forgot');
             }
-            $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
 
+            // Generate token (WPU style)
+            if (function_exists('random_bytes')) {
+                $token = base64_encode(random_bytes(32));
+            } else {
+                $token = base64_encode(openssl_random_pseudo_bytes(32));
+            }
+
+            // Insert into user_token
             db()->execute(
-                "UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE LOWER(email) = ?",
-                [$token, $expires, $email]
+                "INSERT INTO user_token (email, token, date_created) VALUES (?, ?, ?)",
+                [$email, $token, time()]
             );
 
             // Send reset email
@@ -332,134 +323,114 @@ class Auth extends \Controller {
             if (empty($mailResult['success'])) {
                 $mailMessage = $mailResult['message'] ?? 'Unknown mail error';
                 error_log('Reset email failed for ' . $email . ': ' . $mailMessage);
-
-                if ($this->canUseLocalResetFallback()) {
-                    setFlash('success', 'Mode localhost: SMTP belum dikonfigurasi, jadi halaman reset password dibuka langsung untuk testing.');
-                    redirect('auth/resetPassword?token=' . rawurlencode($token));
-                }
-
-                setFlash('error', $this->resetMailErrorMessage($mailResult));
+                setFlash('error', 'Gagal mengirim email. Detail: ' . $mailMessage);
                 redirect('auth/forgot');
             }
 
-            setFlash('success', 'Link reset password telah dikirim ke <strong>' . h($email) . '</strong>. Silakan cek inbox atau folder spam Anda.');
+            setFlash('success', 'Silakan cek email Anda untuk reset password!');
         } else {
-            setFlash('success', 'Jika email terdaftar, link reset password telah dikirim. Silakan cek inbox Anda.');
+            setFlash('error', 'Email tidak terdaftar!');
         }
 
         redirect('auth/forgot');
     }
 
     /**
-     * Reset Password - Show new password form
+     * Reset Password - Verify token and redirect to change password
      */
     public function resetPassword() {
+        $email = trim((string) (isset($_GET['email']) ? $_GET['email'] : ''));
         $token = trim((string) (isset($_GET['token']) ? $_GET['token'] : ''));
 
         if (!$this->ensureResetPasswordSchema()) {
-            setFlash('error', 'Fitur reset password belum siap di database hosting. Jalankan migrasi forgot password atau hubungi admin.');
+            setFlash('error', 'Fitur reset password belum siap di database.');
             redirect('auth/login');
         }
 
-        if (empty($token)) {
-            setFlash('error', 'Token tidak valid');
+        $user = db()->row("SELECT email FROM users WHERE LOWER(email) = ?", [strtolower($email)]);
+
+        if ($user) {
+            $user_token = db()->row("SELECT * FROM user_token WHERE token = ?", [$token]);
+
+            if ($user_token) {
+                // Check if token is older than 24 hours (86400 seconds)
+                if (time() - (int)$user_token['date_created'] < (60 * 60 * 24)) {
+                    $_SESSION['reset_email'] = $email;
+                    redirect('auth/changePassword');
+                } else {
+                    db()->execute("DELETE FROM user_token WHERE email = ?", [$email]);
+                    setFlash('error', 'Reset password gagal! Token kedaluwarsa.');
+                    redirect('auth/login');
+                }
+            } else {
+                setFlash('error', 'Reset password gagal! Token salah.');
+                redirect('auth/login');
+            }
+        } else {
+            setFlash('error', 'Reset password gagal! Email salah.');
             redirect('auth/login');
         }
+    }
 
-        $reset = db()->row(
-            "SELECT email, reset_token_expires FROM users WHERE reset_token = ?",
-            [$token]
-        );
-
-        if (!$reset) {
-            setFlash('error', 'Token tidak ditemukan atau sudah digunakan');
+    /**
+     * Change Password Page
+     */
+    public function changePassword() {
+        if (!isset($_SESSION['reset_email'])) {
             redirect('auth/login');
-        }
-
-        if (strtotime($reset['reset_token_expires']) < time()) {
-            db()->execute(
-                "UPDATE users SET reset_token = NULL, reset_token_expires = NULL WHERE reset_token = ?",
-                [$token]
-            );
-            setFlash('error', 'Token sudah kedaluwarsa. Silakan minta link baru.');
-            redirect('auth/forgot');
         }
 
         $data = [
-            'title' => 'Reset Password - DST Recruitment',
+            'title' => 'Ganti Password - DST Recruitment',
             'page' => 'reset-password',
-            'token' => $token,
-            'email' => $reset['email']
+            'email' => $_SESSION['reset_email']
         ];
 
         $this->view('layouts/header', $data);
-        $this->view('auth/reset', $data);
+        $this->view('auth/change-password', $data);
         $this->view('layouts/footer');
     }
 
     /**
-     * Process Reset Password
+     * Process Change Password
      */
-    public function doResetPassword() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    public function doChangePassword() {
+        if (!isset($_SESSION['reset_email'])) {
             redirect('auth/login');
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('auth/changePassword');
         }
 
         requireValidCsrf();
 
-        if (!$this->ensureResetPasswordSchema()) {
-            setFlash('error', 'Fitur reset password belum siap di database hosting. Jalankan migrasi forgot password atau hubungi admin.');
-            redirect('auth/login');
-        }
-
-        $token = trim((string) (isset($_POST['token']) ? $_POST['token'] : ''));
-        $password = isset($_POST['password']) ? $_POST['password'] : '';
-        $confirm_password = isset($_POST['confirm_password']) ? $_POST['confirm_password'] : '';
-
-        if (empty($token)) {
-            setFlash('error', 'Token tidak valid');
-            redirect('auth/login');
-        }
-
-        $reset = db()->row(
-            "SELECT email, reset_token_expires FROM users WHERE reset_token = ?",
-            [$token]
-        );
-
-        if (!$reset) {
-            setFlash('error', 'Token tidak ditemukan atau sudah digunakan');
-            redirect('auth/login');
-        }
-
-        if (strtotime($reset['reset_token_expires']) < time()) {
-            db()->execute(
-                "UPDATE users SET reset_token = NULL, reset_token_expires = NULL WHERE reset_token = ?",
-                [$token]
-            );
-            setFlash('error', 'Token sudah kedaluwarsa. Silakan minta link baru.');
-            redirect('auth/forgot');
-        }
+        $password = isset($_POST['password1']) ? $_POST['password1'] : (isset($_POST['password']) ? $_POST['password'] : '');
+        $confirm_password = isset($_POST['password2']) ? $_POST['password2'] : (isset($_POST['confirm_password']) ? $_POST['confirm_password'] : '');
 
         if (strlen($password) < 6) {
-            setFlash('error', 'Password baru minimal 6 karakter');
-            redirect('auth/resetPassword?token=' . $token);
+            setFlash('error', 'Password terlalu pendek!');
+            redirect('auth/changePassword');
         }
 
         if ($password !== $confirm_password) {
-            setFlash('error', 'Password tidak cocok');
-            redirect('auth/resetPassword?token=' . $token);
+            setFlash('error', 'Password tidak cocok!');
+            redirect('auth/changePassword');
         }
 
         // Update password and clear token
         $hashed = hashPassword($password);
-        $email = $reset['email'];
+        $email = $_SESSION['reset_email'];
 
         db()->execute(
-            "UPDATE users SET password = ?, reset_token = NULL, reset_token_expires = NULL, updated_at = NOW() WHERE LOWER(email) = ?",
+            "UPDATE users SET password = ?, updated_at = NOW() WHERE LOWER(email) = ?",
             [$hashed, strtolower($email)]
         );
 
-        setFlash('success', 'Password berhasil diubah! Silakan login dengan password baru.');
+        unset($_SESSION['reset_email']);
+        db()->execute("DELETE FROM user_token WHERE LOWER(email) = ?", [strtolower($email)]);
+
+        setFlash('success', 'Password berhasil diubah! Silakan login.');
         redirect('auth/login');
     }
 

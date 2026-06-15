@@ -112,7 +112,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; <?= date('Y') ?> PT Digdaya Solusi Teknologi. All rights reserved.</p>
+                <p>&copy; 2026 PT Digdaya Solusi Teknologi. All rights reserved.</p>
             </div>
         </div>
     </footer>

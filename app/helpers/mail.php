@@ -56,26 +56,38 @@ function sendMail(string $to, string $subject, string $htmlBody): array {
         $mailPort = defined('MAIL_PORT') ? (int) MAIL_PORT : 587;
         $mailSecure = strtolower((string) (defined('MAIL_SECURE') ? MAIL_SECURE : 'tls'));
 
+        // Use ssl:// prefix for host on port 465 (WPU-style), otherwise use host as-is
+        $rawHost = defined('MAIL_HOST') ? MAIL_HOST : 'smtp.gmail.com';
+        if ($mailPort === 465 || $mailSecure === 'ssl') {
+            $mail->Host   = 'ssl://' . ltrim($rawHost, '/');
+            $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
+            $mail->SMTPAutoTLS = false;
+        } elseif (in_array($mailSecure, ['none', 'false', '0', ''], true)) {
+            $mail->Host   = $rawHost;
+            $mail->SMTPSecure = '';
+            $mail->SMTPAutoTLS = false;
+        } else {
+            $mail->Host   = $rawHost;
+            $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->SMTPAutoTLS = true;
+        }
+
         $mail->isSMTP();
-        $mail->Host       = defined('MAIL_HOST') ? MAIL_HOST : 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
         $mail->Username   = $mailUsername;
         $mail->Password   = $mailPassword;
         $mail->Port       = $mailPort;
         $mail->CharSet    = 'UTF-8';
-        $mail->Timeout    = defined('MAIL_TIMEOUT') ? max(1, (int) MAIL_TIMEOUT) : 20;
+        $mail->Timeout    = defined('MAIL_TIMEOUT') ? max(1, (int) MAIL_TIMEOUT) : 30;
         $mail->SMTPKeepAlive = false;
 
-        if ($mailSecure === 'ssl' || $mailPort === 465) {
-            $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
-            $mail->SMTPAutoTLS = false;
-        } elseif (in_array($mailSecure, ['none', 'false', '0', ''], true)) {
-            $mail->SMTPSecure = '';
-            $mail->SMTPAutoTLS = false;
-        } else {
-            $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-            $mail->SMTPAutoTLS = true;
-        }
+        $mail->SMTPOptions = [
+            'ssl' => [
+                'verify_peer'       => false,
+                'verify_peer_name'  => false,
+                'allow_self_signed' => true,
+            ]
+        ];
 
         $mail->setFrom(
             $mailFrom,

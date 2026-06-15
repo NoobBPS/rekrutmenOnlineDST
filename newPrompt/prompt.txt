@@ -1,8 +1,6 @@
-1. ketika HRD ingin mulai chat kandidat dengan posisi yang berbeda.. tapi malah diarahin chatnya ke chat yang lama (sudah ada)..
-saya mau ketika HRD ingin mulai chat kandidat dengan posisi yang baru dilamar.. maka chat dan ruang chatnya juga dibuatkan yang baru
-dengan posisi yang baru / dilamar kandidat juga (posisi yang dilamar muncul di container tepatnya di bawah username pada ruang chat (chat/room)
-seperti biasanya
-2.  untuk tampilan mobile, ruang chatnya sudah lumayan.. tapi saya ingin bagian bawahnya yaitu kolom input pesan dan dikanannya yaitu tombol kirim pesan berada tepat di atas 4 menu tampilan mobile.. jadi gaperlu scroll ke bawah-bawah lagi untuk mengetik pesan baru dan mengirimnya.. ikut tampilan chat glints berikut di mobile
-3. untuk container pesan berantakan yang tadi saya bilang rupanya berada di tampilan desktop.. rapihkan chatnya.. dan juga rapihkan di atasnya seperti di gambar berikut.. tombol daftar pindahkan ke kanan tapi tetap ada jarak dengan ujung (tepi) kanannya.. untuk huruf dst recruitment di tengah-tengah.. dan tombol login di paling kiri.. tapi tetap ada jarak dengan batas (tepi) kirinya
-4. oh iya terakhir.. untuk di tampilan desktop.. buatkan footer yang bagus untuk di seluruh halaman dari seluruh role akun yang ada, seperti HRD, user, dan ADmin.. jangan lupa footernya mengandung kata "huruf c lingkaran 2026 PT Digdaya Solusi Teknologi"
-5. satu lagi, tombol "ganti password" digeser ke bawah lagi supaya ada jarak dengan container di atasnya
+1. oh iya terakhir.. untuk di tampilan desktop.. buatkan footer yang bagus untuk di seluruh halaman dari seluruh role akun yang ada, seperti HRD, user, dan ADmin.. jangan lupa footernya mengandung kata "huruf c lingkaran 2026 PT Digdaya Solusi Teknologi"
+
+2. satu lagi, tombol "ganti password" di halaman profile digeser ke bawah lagi supaya ada jarak dengan container di atasnya
+terakhir perbaiki error yang ada di tab terminal
+
+3. untuk email yang dituju untuk tujuan reset password adalah "info@karirdigdaya.web.id" dengan password "5-MdufXB3aJigLd%"

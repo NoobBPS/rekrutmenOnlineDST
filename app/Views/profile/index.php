@@ -87,7 +87,7 @@ $profileAvatarUrl = avatarUrl($user['avatar'] ?? null);
     </div>
     <?php endif; ?>
 
-    <div class="profile-actions">
+    <div class="profile-actions" style="margin-top: 40px;">
         <a href="<?= BASE_URL ?>profile/password" class="btn btn-secondary">Ganti Password</a>
     </div>
 </div>
