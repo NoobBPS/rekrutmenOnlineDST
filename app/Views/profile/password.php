@@ -11,12 +11,12 @@
                 <label>Password Baru</label>
                 <input type="password" name="new_password" minlength="6" required>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="margin-bottom: 5px;">
                 <label>Konfirmasi Password Baru</label>
                 <input type="password" name="confirm_password" minlength="6" required>
             </div>
-            <button type="submit" class="btn btn-primary btn-block">Simpan Password Baru</button>
-            <a href="<?= BASE_URL ?>profile" class="btn btn-secondary">Kembali</a>
+            <button type="submit" class="btn btn-primary btn-block" style="margin-top: 0px;">Simpan Password Baru</button>
+            <a href="<?= BASE_URL ?>profile" class="btn btn-secondary" style="margin-top: 10px; display: block;">Kembali</a>
         </form>
     </div>
 </div>

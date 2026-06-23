@@ -51,7 +51,9 @@
                 <input type="text" name="skills" value="<?= h($job['skills'] ?? '') ?>">
             </div>
             <button type="submit" class="btn btn-primary btn-block">Simpan</button>
-            <a href="<?= BASE_URL ?>jobs/manage" class="btn btn-secondary">Batal</a>
+            <div style="text-align: center; margin-top: 30px; margin-bottom: 10px;">
+                <a href="<?= BASE_URL ?>jobs/manage" class="btn btn-secondary" style="display: inline-block; padding-left: 30px; padding-right: 30px;">Batal</a>
+            </div>
         </form>
     </div>
 </div>

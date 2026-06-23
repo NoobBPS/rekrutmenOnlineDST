@@ -23,7 +23,9 @@
                 <textarea name="cover_letter" rows="5" placeholder="Tuliskan motivasi Anda..."></textarea>
             </div>
             <button type="submit" class="btn btn-primary btn-block">Kirim Lamaran</button>
-            <a href="<?= BASE_URL ?>jobs/detail/<?= (int) $job['id'] ?>" class="btn btn-secondary">Batal</a>
+            <div style="text-align: center; margin-top: 30px; margin-bottom: 10px;">
+                <a href="<?= BASE_URL ?>jobs/detail/<?= (int) $job['id'] ?>" class="btn btn-secondary" style="display: inline-block; padding-left: 30px; padding-right: 30px;">Batal</a>
+            </div>
         </form>
     </div>
 </div>

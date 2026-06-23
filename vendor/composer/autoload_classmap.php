@@ -6,14 +6,5 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
-    'App\\Controllers\\Kirim_email' => $baseDir . '/app/Controllers/Kirim_email.php',
-    'Applications' => $baseDir . '/app/Controllers/Applications.php',
-    'Auth' => $baseDir . '/app/Controllers/Auth.php',
-    'Chat' => $baseDir . '/app/Controllers/Chat.php',
     'Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',
-    'Controller' => $baseDir . '/app/core/Controller.php',
-    'Dashboard' => $baseDir . '/app/Controllers/Dashboard.php',
-    'Jobs' => $baseDir . '/app/Controllers/Jobs.php',
-    'Model' => $baseDir . '/app/core/Model.php',
-    'Profile' => $baseDir . '/app/Controllers/Profile.php',
 );

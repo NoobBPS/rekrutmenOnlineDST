@@ -1,23 +1,16 @@
 {
-  "name": "dst/recruitment",
-  "description": "DST Recruitment web app",
-  "license": "proprietary",
-  "type": "project",
-  "require": {
-    "php": "^8.1",
-    "phpmailer/phpmailer": "^6.9"
-  },
-  "autoload": {
-    "classmap": [
-      "app/Controllers",
-      "app/core"
-    ],
-    "files": [
-      "app/helpers.php"
-    ]
-  },
-  "config": {
-    "secure-http": false,
-    "sort-packages": true
-  }
+    "name": "dst/recruitment",
+    "description": "DST Recruitment System",
+    "require": {
+        "php": "^8.2",
+        "codeigniter4/framework": "^4.7",
+        "phpmailer/phpmailer": "^6.9"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/"
+        },
+        "files": []
+    },
+    "prefer-stable": true
 }

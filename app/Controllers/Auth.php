@@ -1,189 +1,184 @@
 <?php
 /**
- * Auth Controller - DST Recruitment System
+ * Auth Controller - DST Recruitment System (CI4)
  */
 
-class Auth extends \Controller {
-    
-    public function __construct() {
-        parent::__construct();
-    }
-    
+namespace App\Controllers;
+
+class Auth extends BaseController
+{
     /**
      * Login Page
      */
-    public function login() {
+    public function login()
+    {
         if (isLoggedIn()) {
             if (hasRole('admin')) {
-                redirect('jobs/manage');
+                return redirect()->to(base_url('jobs/manage'));
             }
 
             if (hasRole('hrd')) {
-                redirect('dashboard/hrd');
+                return redirect()->to(base_url('dashboard/hrd'));
             }
 
-            redirect('dashboard');
+            return redirect()->to(base_url('dashboard'));
         }
-        
+
         $data = [
             'title' => 'Login - DST Recruitment',
             'page' => 'login'
         ];
-        
-        $this->view('layouts/header', $data);
-        $this->view('auth/login', $data);
-        $this->view('layouts/footer');
+
+        return view('layouts/header', $data) . view('auth/login', $data) . view('layouts/footer');
     }
-    
+
     /**
      * Register Page
      */
-    public function register() {
+    public function register()
+    {
         if (isLoggedIn()) {
-            redirect('dashboard');
+            return redirect()->to(base_url('dashboard'));
         }
-        
+
         $data = [
             'title' => 'Daftar - DST Recruitment',
             'page' => 'register'
         ];
-        
-        $this->view('layouts/header', $data);
-        $this->view('auth/register', $data);
-        $this->view('layouts/footer');
+
+        return view('layouts/header', $data) . view('auth/register', $data) . view('layouts/footer');
     }
-    
+
     /**
      * Process Login
      */
-    public function doLogin() {
+    public function doLogin()
+    {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            redirect('auth/login');
+            return redirect()->to(base_url('auth/login'));
         }
 
-        requireValidCsrf();
-        
         $email = strtolower(trim((string) (isset($_POST['email']) ? $_POST['email'] : '')));
         $password = isset($_POST['password']) ? $_POST['password'] : '';
-        
+
         if (empty($email) || empty($password)) {
             setFlash('error', 'Email dan password wajib diisi');
-            redirect('auth/login');
+            return redirect()->to(base_url('auth/login'));
         }
-        
+
         $user = db()->row(
             "SELECT * FROM users WHERE LOWER(email) = ?",
             [$email]
         );
-        
+
         $status = isset($user['status']) ? $user['status'] : 'active';
         if (!$user || !verifyPassword($password, $user['password'])) {
             setFlash('error', 'Email atau password salah');
-            redirect('auth/login');
+            return redirect()->to(base_url('auth/login'));
         }
-        
+
         if ($status === 'inactive') {
             setFlash('error', 'Akun Anda dinonaktifkan');
-            redirect('auth/login');
+            return redirect()->to(base_url('auth/login'));
         }
 
         $user_id = (int) ($user['user_id'] ?? $user['id'] ?? 0);
         if ($user_id <= 0) {
             setFlash('error', 'Akun tidak valid');
-            redirect('auth/login');
+            return redirect()->to(base_url('auth/login'));
         }
-        
+
         $_SESSION['user_id'] = $user_id;
         $_SESSION['email'] = $user['email'];
         $_SESSION['full_name'] = $user['full_name'];
         $_SESSION['role'] = $user['role'];
         session_regenerate_id(true);
-        
+
         setFlash('success', 'Selamat datang, ' . $user['full_name'] . '!');
         $role = isset($user['role']) ? $user['role'] : '';
 
         if ($role === 'admin') {
-            redirect('jobs/manage');
+            return redirect()->to(base_url('jobs/manage'));
         }
 
         if ($role === 'hrd') {
-            redirect('dashboard/hrd');
+            return redirect()->to(base_url('dashboard/hrd'));
         }
 
-        redirect('dashboard');
+        return redirect()->to(base_url('dashboard'));
     }
-    
+
     /**
      * Process Register
      */
-    public function doRegister() {
+    public function doRegister()
+    {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            redirect('auth/register');
+            return redirect()->to(base_url('auth/register'));
         }
 
-        requireValidCsrf();
-        
         $email = strtolower(trim((string) (isset($_POST['email']) ? $_POST['email'] : '')));
         $password = isset($_POST['password']) ? $_POST['password'] : '';
         $confirm_password = isset($_POST['confirm_password']) ? $_POST['confirm_password'] : '';
         $full_name = sanitize(isset($_POST['full_name']) ? $_POST['full_name'] : '');
-        
+
         // Validasi
         if (empty($email) || empty($password) || empty($full_name)) {
             setFlash('error', 'Semua field wajib diisi');
-            redirect('auth/register');
+            return redirect()->to(base_url('auth/register'));
         }
-        
+
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             setFlash('error', 'Format email tidak valid');
-            redirect('auth/register');
+            return redirect()->to(base_url('auth/register'));
         }
-        
+
         if (strlen($password) < 6) {
             setFlash('error', 'Password minimal 6 karakter');
-            redirect('auth/register');
+            return redirect()->to(base_url('auth/register'));
         }
-        
+
         if ($password !== $confirm_password) {
             setFlash('error', 'Password tidak cocok');
-            redirect('auth/register');
+            return redirect()->to(base_url('auth/register'));
         }
-        
+
         // Cek email sudah terdaftar
         $existing = db()->row(
             "SELECT 1 FROM users WHERE LOWER(email) = ? LIMIT 1",
             [$email]
         );
-        
+
         if ($existing) {
             setFlash('error', 'Email sudah terdaftar');
-            redirect('auth/register');
+            return redirect()->to(base_url('auth/register'));
         }
-        
+
         // Insert user baru
         $hashed_password = hashPassword($password);
-        
+
         $success = db()->execute(
             "INSERT INTO users (email, password, full_name, role) VALUES (?, ?, ?, 'user')",
             [$email, $hashed_password, $full_name]
         );
-        
+
         if ($success) {
             // Do not auto-login the user after registration. Redirect to the login page
             // so they can explicitly authenticate. This avoids creating sessions before
             // email verification or profile completion workflows.
             setFlash('success', 'Pendaftaran berhasil! Silakan login untuk melanjutkan.');
-            redirect('auth/login');
+            return redirect()->to(base_url('auth/login'));
         } else {
             setFlash('error', 'Pendaftaran gagal. Silakan coba lagi.');
-            redirect('auth/register');
+            return redirect()->to(base_url('auth/register'));
         }
     }
-    
+
     /**
      * Logout
      */
-    public function logout() {
+    public function logout()
+    {
         $_SESSION = [];
         if (ini_get('session.use_cookies')) {
             $params = session_get_cookie_params();
@@ -197,27 +192,27 @@ class Auth extends \Controller {
                 $params['httponly']
             );
         }
-        session_destroy();
+        session()->destroy();
         session_start();
         setFlash('success', 'Anda telah logout');
-        redirect('auth/login');
+        return redirect()->to(base_url('auth/login'));
     }
-    
+
     /**
      * Forgot Password - Show email form
      */
-    public function forgot() {
+    public function forgot()
+    {
         $data = [
             'title' => 'Lupa Password - DST Recruitment',
             'page' => 'forgot'
         ];
-        
-        $this->view('layouts/header', $data);
-        $this->view('auth/forgot', $data);
-        $this->view('layouts/footer');
+
+        return view('layouts/header', $data) . view('auth/forgot', $data) . view('layouts/footer');
     }
 
-    private function ensureResetPasswordSchema() {
+    private function ensureResetPasswordSchema()
+    {
         try {
             $tableExists = db()->row(
                 "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user_token'"
@@ -239,11 +234,13 @@ class Auth extends \Controller {
         }
     }
 
-    private function resetPasswordUrl($token) {
+    private function resetPasswordUrl($token)
+    {
         return BASE_URL . 'auth/resetPassword?email=' . rawurlencode($_POST['email']) . '&token=' . rawurlencode($token);
     }
 
-    private function canUseLocalResetFallback() {
+    private function canUseLocalResetFallback()
+    {
         $hostValue = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
         $host = explode(':', (string) $hostValue)[0];
         $appEnv = strtolower((string) (getenv('APP_ENV') ?: 'development'));
@@ -251,13 +248,15 @@ class Auth extends \Controller {
         return $appEnv !== 'production' && function_exists('dstIsLocalHost') && dstIsLocalHost($host);
     }
 
-    private function canShowMailDebug() {
+    private function canShowMailDebug()
+    {
         $debug = strtolower((string) (getenv('APP_DEBUG') ?: 'false'));
 
         return in_array($debug, ['1', 'true', 'yes', 'on'], true);
     }
 
-    private function resetMailErrorMessage($mailResult) {
+    private function resetMailErrorMessage($mailResult)
+    {
         $message = 'Gagal mengirim link reset password. Pastikan konfigurasi SMTP (Host, User, Password, Port) sudah benar di hosting.';
 
         if ($this->canShowMailDebug() && isset($mailResult['message']) && !empty($mailResult['message'])) {
@@ -270,28 +269,27 @@ class Auth extends \Controller {
     /**
      * Process Forgot Password - Generate reset token
      */
-    public function doForgot() {
+    public function doForgot()
+    {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            redirect('auth/forgot');
+            return redirect()->to(base_url('auth/forgot'));
         }
-
-        requireValidCsrf();
 
         $email = strtolower(trim((string) (isset($_POST['email']) ? $_POST['email'] : '')));
 
         if (empty($email)) {
             setFlash('error', 'Email wajib diisi');
-            redirect('auth/forgot');
+            return redirect()->to(base_url('auth/forgot'));
         }
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             setFlash('error', 'Format email tidak valid');
-            redirect('auth/forgot');
+            return redirect()->to(base_url('auth/forgot'));
         }
 
         if (!$this->ensureResetPasswordSchema()) {
             setFlash('error', 'Fitur reset password belum siap di database hosting. Jalankan migrasi forgot password atau hubungi admin.');
-            redirect('auth/forgot');
+            return redirect()->to(base_url('auth/forgot'));
         }
 
         // Non-existing emails still receive a generic success message.
@@ -300,7 +298,7 @@ class Auth extends \Controller {
         if ($user) {
             if (($user['status'] ?? 'active') === 'inactive') {
                 setFlash('error', 'Email belum diaktivasi atau dinonaktifkan!');
-                redirect('auth/forgot');
+                return redirect()->to(base_url('auth/forgot'));
             }
 
             // Generate token (WPU style)
@@ -324,7 +322,7 @@ class Auth extends \Controller {
                 $mailMessage = $mailResult['message'] ?? 'Unknown mail error';
                 error_log('Reset email failed for ' . $email . ': ' . $mailMessage);
                 setFlash('error', 'Gagal mengirim email. Detail: ' . $mailMessage);
-                redirect('auth/forgot');
+                return redirect()->to(base_url('auth/forgot'));
             }
 
             setFlash('success', 'Silakan cek email Anda untuk reset password!');
@@ -332,19 +330,20 @@ class Auth extends \Controller {
             setFlash('error', 'Email tidak terdaftar!');
         }
 
-        redirect('auth/forgot');
+        return redirect()->to(base_url('auth/forgot'));
     }
 
     /**
      * Reset Password - Verify token and redirect to change password
      */
-    public function resetPassword() {
+    public function resetPassword()
+    {
         $email = trim((string) (isset($_GET['email']) ? $_GET['email'] : ''));
         $token = trim((string) (isset($_GET['token']) ? $_GET['token'] : ''));
 
         if (!$this->ensureResetPasswordSchema()) {
             setFlash('error', 'Fitur reset password belum siap di database.');
-            redirect('auth/login');
+            return redirect()->to(base_url('auth/login'));
         }
 
         $user = db()->row("SELECT email FROM users WHERE LOWER(email) = ?", [strtolower($email)]);
@@ -356,28 +355,29 @@ class Auth extends \Controller {
                 // Check if token is older than 24 hours (86400 seconds)
                 if (time() - (int)$user_token['date_created'] < (60 * 60 * 24)) {
                     $_SESSION['reset_email'] = $email;
-                    redirect('auth/changePassword');
+                    return redirect()->to(base_url('auth/changePassword'));
                 } else {
                     db()->execute("DELETE FROM user_token WHERE email = ?", [$email]);
                     setFlash('error', 'Reset password gagal! Token kedaluwarsa.');
-                    redirect('auth/login');
+                    return redirect()->to(base_url('auth/login'));
                 }
             } else {
                 setFlash('error', 'Reset password gagal! Token salah.');
-                redirect('auth/login');
+                return redirect()->to(base_url('auth/login'));
             }
         } else {
             setFlash('error', 'Reset password gagal! Email salah.');
-            redirect('auth/login');
+            return redirect()->to(base_url('auth/login'));
         }
     }
 
     /**
      * Change Password Page
      */
-    public function changePassword() {
+    public function changePassword()
+    {
         if (!isset($_SESSION['reset_email'])) {
-            redirect('auth/login');
+            return redirect()->to(base_url('auth/login'));
         }
 
         $data = [
@@ -386,36 +386,33 @@ class Auth extends \Controller {
             'email' => $_SESSION['reset_email']
         ];
 
-        $this->view('layouts/header', $data);
-        $this->view('auth/change-password', $data);
-        $this->view('layouts/footer');
+        return view('layouts/header', $data) . view('auth/change_password', $data) . view('layouts/footer');
     }
 
     /**
      * Process Change Password
      */
-    public function doChangePassword() {
+    public function doChangePassword()
+    {
         if (!isset($_SESSION['reset_email'])) {
-            redirect('auth/login');
+            return redirect()->to(base_url('auth/login'));
         }
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            redirect('auth/changePassword');
+            return redirect()->to(base_url('auth/changePassword'));
         }
-
-        requireValidCsrf();
 
         $password = isset($_POST['password1']) ? $_POST['password1'] : (isset($_POST['password']) ? $_POST['password'] : '');
         $confirm_password = isset($_POST['password2']) ? $_POST['password2'] : (isset($_POST['confirm_password']) ? $_POST['confirm_password'] : '');
 
         if (strlen($password) < 6) {
             setFlash('error', 'Password terlalu pendek!');
-            redirect('auth/changePassword');
+            return redirect()->to(base_url('auth/changePassword'));
         }
 
         if ($password !== $confirm_password) {
             setFlash('error', 'Password tidak cocok!');
-            redirect('auth/changePassword');
+            return redirect()->to(base_url('auth/changePassword'));
         }
 
         // Update password and clear token
@@ -431,14 +428,15 @@ class Auth extends \Controller {
         db()->execute("DELETE FROM user_token WHERE LOWER(email) = ?", [strtolower($email)]);
 
         setFlash('success', 'Password berhasil diubah! Silakan login.');
-        redirect('auth/login');
+        return redirect()->to(base_url('auth/login'));
     }
 
     /**
      * Send password reset email via Gmail SMTP
      */
-    private function sendResetEmail($email, $resetUrl) {
-        require_once APPPATH . 'helpers/mail.php';
+    private function sendResetEmail($email, $resetUrl)
+    {
+        require_once APPPATH . 'Helpers/mail.php';
 
         $safeResetUrl = h($resetUrl);
         $subject = 'Reset Password - DST Recruitment';

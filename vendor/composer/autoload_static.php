@@ -6,35 +6,51 @@ namespace Composer\Autoload;
 
 class ComposerStaticInit9824fd355c6e245f4bcf00a1ee53e9a8
 {
-    public static $files = array (
-        '6bd83d4c0168bbba6d71efbe9dbe4199' => __DIR__ . '/../..' . '/app/helpers.php',
-    );
-
     public static $prefixLengthsPsr4 = array (
         'P' =>
         array (
+            'Psr\\Log\\' => 8,
             'PHPMailer\\PHPMailer\\' => 20,
+        ),
+        'L' =>
+        array (
+            'Laminas\\Escaper\\' => 16,
+        ),
+        'C' =>
+        array (
+            'CodeIgniter\\' => 12,
+        ),
+        'A' =>
+        array (
+            'App\\' => 4,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
+        'Psr\\Log\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/psr/log/src',
+        ),
         'PHPMailer\\PHPMailer\\' =>
         array (
             0 => __DIR__ . '/..' . '/phpmailer/phpmailer/src',
         ),
+        'Laminas\\Escaper\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/laminas/laminas-escaper/src',
+        ),
+        'CodeIgniter\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/codeigniter4/framework/system',
+        ),
+        'App\\' =>
+        array (
+            0 => __DIR__ . '/../..' . '/app',
+        ),
     );
 
     public static $classMap = array (
-        'App\\Controllers\\Kirim_email' => __DIR__ . '/../..' . '/app/Controllers/Kirim_email.php',
-        'Applications' => __DIR__ . '/../..' . '/app/Controllers/Applications.php',
-        'Auth' => __DIR__ . '/../..' . '/app/Controllers/Auth.php',
-        'Chat' => __DIR__ . '/../..' . '/app/Controllers/Chat.php',
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
-        'Controller' => __DIR__ . '/../..' . '/app/core/Controller.php',
-        'Dashboard' => __DIR__ . '/../..' . '/app/Controllers/Dashboard.php',
-        'Jobs' => __DIR__ . '/../..' . '/app/Controllers/Jobs.php',
-        'Model' => __DIR__ . '/../..' . '/app/core/Model.php',
-        'Profile' => __DIR__ . '/../..' . '/app/Controllers/Profile.php',
     );
 
     public static function getInitializer(ClassLoader $loader)

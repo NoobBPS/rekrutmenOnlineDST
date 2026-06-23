@@ -1,6 +1,13 @@
-1. oh iya terakhir.. untuk di tampilan desktop.. buatkan footer yang bagus untuk di seluruh halaman dari seluruh role akun yang ada, seperti HRD, user, dan ADmin.. jangan lupa footernya mengandung kata "huruf c lingkaran 2026 PT Digdaya Solusi Teknologi"
+1. perbaiki error saat ingin migrasi ke ci4
+Warning: require_once(C:\xampp\htdocs\dst-recruitment\app\Config/Constants.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\dst-recruitment\vendor\codeigniter4\framework\system\Boot.php on line 284
+Fatal error: Uncaught Error: Failed opening required 'C:\xampp\htdocs\dst-recruitment\app\Config/Constants.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\dst-recruitment\vendor\codeigniter4\framework\system\Boot.php:284 Stack trace: #0 C:\xampp\htdocs\dst-recruitment\vendor\codeigniter4\framework\system\Boot.php(46): CodeIgniter\Boot::loadConstants() #1 C:\xampp\htdocs\dst-recruitment\index.php(22): CodeIgniter\Boot::bootWeb(Object(Config\Paths)) #2 {main} thrown in C:\xampp\htdocs\dst-recruitment\vendor\codeigniter4\framework\system\Boot.php on line 284
 
-2. satu lagi, tombol "ganti password" di halaman profile digeser ke bawah lagi supaya ada jarak dengan container di atasnya
-terakhir perbaiki error yang ada di tab terminal
+2. Migrasi ke codeigniter 4
+provider jagoanHosting pernah menangani kasus seperti ini saat saya tanya. Berikut jawabannya
+Sehingga untuk kendala yang saat ini masih muncul terindikasi berasal dari sisi script maupun konfigurasi aplikasi CodeIgniter yang digunakan, seperti konfigurasi routing, struktur project CI, pemanggilan controller/function, maupun script yang dijalankan ya pak. Karena kendala sudah masuk ke ranah coding/content website, maka perbaikannya perlu dilakukan dari sisi script aplikasi tersebut ya pak, silahkan untuk direview kembali dari sisi script anda ya pak.
+Tolong cek struktur projek CInya dan lain-lain seperti ketentuan jawaban ini.. CEK SELURUH FILE DAN FOLDER SERTA HUBUNGANNYA DENGAN masing file / folder satu sama lain
 
-3. untuk email yang dituju untuk tujuan reset password adalah "info@karirdigdaya.web.id" dengan password "5-MdufXB3aJigLd%"
+3. satu lagi tombol ganti password kurang ke atas.. dan tombol batal di halaman detail melamar pekerjaan kurang ke bawah (supaya ada jarak dengan tombol kirim lamaran)
+
+4. saya lupa password, lalu saya menggunakan fitur lupa password, yang mana cara kerjanya sistem mengirimkan link reset password ke email di googlemail si akun.. https://karirdigdaya.web.id/auth/changePassword (ini link resetnya) nah kemudian saya klik link tersebut.. lalu muncul output seperti di gambar.. tolong perbaiki
+agar halaman changePassword tersebut tidak error dan bisa mengubah password..

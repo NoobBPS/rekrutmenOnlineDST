@@ -32,9 +32,10 @@ if (is_file(APPPATH . 'Config/Mail.php')) {
 function sendMail(string $to, string $subject, string $htmlBody): array
 {
     // ── Validasi kredensial ──────────────────────────────────────────────────
-    $mailUser = defined('MAIL_USERNAME') ? MAIL_USERNAME : '';
-    $mailPass = defined('MAIL_PASSWORD') ? MAIL_PASSWORD : '';
-    $mailFrom = (defined('MAIL_FROM') && MAIL_FROM !== '') ? MAIL_FROM : $mailUser;
+    $mailUser = env('MAIL_USERNAME') ?: getenv('MAIL_USERNAME');
+    $mailPass = env('MAIL_PASSWORD') ?: getenv('MAIL_PASSWORD');
+    $mailFrom = env('MAIL_FROM') ?: getenv('MAIL_FROM');
+    if (empty($mailFrom)) $mailFrom = $mailUser;
 
     if (empty($mailUser) || empty($mailPass)) {
         return _mailError('SMTP credentials not configured in .env');
@@ -50,9 +51,9 @@ function sendMail(string $to, string $subject, string $htmlBody): array
     }
 
     // ── Konfigurasi SMTP (Dinamis Port 465 / 587) ────────────────────────────
-    $mailPort   = defined('MAIL_PORT') ? (int) MAIL_PORT : 465;
-    $rawHost    = defined('MAIL_HOST') ? MAIL_HOST : 'mail.karirdigdaya.web.id';
-    $mailSecure = defined('MAIL_SECURE') ? strtolower(MAIL_SECURE) : '';
+    $mailPort   = (int) (env('MAIL_PORT') ?: getenv('MAIL_PORT') ?: 465);
+    $rawHost    = env('MAIL_HOST') ?: getenv('MAIL_HOST') ?: 'mail.karirdigdaya.web.id';
+    $mailSecure = strtolower(env('MAIL_SECURE') ?: getenv('MAIL_SECURE') ?: '');
 
     try {
         $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
