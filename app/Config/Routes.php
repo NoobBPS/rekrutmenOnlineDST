@@ -32,6 +32,7 @@ $routes->get('jobs/form/(:num)', 'Jobs::form/$1', ['filter' => 'admin']);
 $routes->post('jobs/save', 'Jobs::save', ['filter' => 'admin']);
 $routes->get('jobs/delete/(:num)', 'Jobs::delete/$1', ['filter' => 'admin']);
 $routes->get('jobs/toggleStatus/(:num)', 'Jobs::toggleStatus/$1', ['filter' => 'admin']);
+$routes->post('jobs/toggleStatus/(:num)', 'Jobs::toggleStatus/$1', ['filter' => 'admin']);
 
 // Applications
 $routes->get('applications', 'Applications::index', ['filter' => 'auth']);
