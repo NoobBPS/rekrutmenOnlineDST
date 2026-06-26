@@ -389,21 +389,42 @@ class Chat extends BaseController {
         $application_id = (int) $application_id;
         $user_id        = (int) $_SESSION['user_id'];
 
-        // Pastikan lamaran ini milik user yang login, dan job-nya punya HRD
+        // Pastikan lamaran ini milik user yang login
         $app = db()->row(
-            "SELECT a.id, j.created_by as hrd_id, j.title as job_title
+            "SELECT a.id, j.created_by as job_creator_id, j.title as job_title
              FROM applications a
              JOIN jobs j ON a.job_id = j.job_id
              WHERE a.id = ? AND a.user_id = ?",
             [$application_id, $user_id]
         );
 
-        if (!$app || empty($app['hrd_id'])) {
+        if (!$app || empty($app['job_creator_id'])) {
             setFlash('error', 'Tidak dapat menemukan HRD untuk lamaran ini.');
             return redirect()->to(base_url('applications'));
         }
 
-        return redirect()->to(base_url('chat/room/' . (int) $app['hrd_id'] . '?application_id=' . $application_id));
+        // Cek apakah pembuat lowongan adalah HRD
+        $creator = db()->row(
+            "SELECT user_id, role FROM users WHERE user_id = ?",
+            [(int) $app['job_creator_id']]
+        );
+
+        if ($creator && $creator['role'] === 'hrd') {
+            // Pembuat lowongan adalah HRD, arahkan chat ke dia
+            $hrd_id = (int) $creator['user_id'];
+        } else {
+            // Pembuat lowongan adalah admin, cari user HRD pertama sebagai tujuan chat
+            $hrd = db()->row(
+                "SELECT user_id FROM users WHERE role = 'hrd' ORDER BY user_id ASC LIMIT 1"
+            );
+            if (!$hrd) {
+                setFlash('error', 'Tidak ada HRD yang tersedia untuk menerima pesan.');
+                return redirect()->to(base_url('applications'));
+            }
+            $hrd_id = (int) $hrd['user_id'];
+        }
+
+        return redirect()->to(base_url('chat/room/' . $hrd_id . '?application_id=' . $application_id));
     }
 
     /**
