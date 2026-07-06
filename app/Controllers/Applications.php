@@ -31,10 +31,10 @@ class Applications extends BaseController {
         
         $applications = db()->select(
             "SELECT a.*, j.title as job_title, j.location, j.type, j.department 
-             FROM applications a 
-             JOIN jobs j ON a.job_id = j.job_id 
-             WHERE a.user_id = ? 
-             ORDER BY a.applied_at DESC",
+            FROM applications a 
+            JOIN jobs j ON a.job_id = j.job_id 
+            WHERE a.user_id = ? 
+            ORDER BY a.applied_at DESC",
             [$user_id]
         );
         
@@ -70,12 +70,13 @@ class Applications extends BaseController {
      */
     public function detail($id) {
         $application = db()->row(
-            "SELECT a.*, j.title as job_title, j.location, j.type, j.description, j.requirements, j.skills,
-                    u.full_name as hrd_name
-             FROM applications a
-             JOIN jobs j ON a.job_id = j.job_id
-             LEFT JOIN users u ON j.created_by = u.user_id
-             WHERE a.id = ?",
+            "SELECT a.*, j.title as job_title, j.location, 
+            j.type, j.description, j.requirements, j.skills, 
+            u.full_name as hrd_name
+            FROM applications a
+            JOIN jobs j ON a.job_id = j.job_id
+            LEFT JOIN users u ON j.created_by = u.user_id
+            WHERE a.id = ?",
             [$id]
         );
         
@@ -105,10 +106,10 @@ class Applications extends BaseController {
                         u.experience_years as candidate_experience_years, u.bio as candidate_bio,
                         j.title as job_title, j.department as job_department, j.skills as job_skills,
                         j.requirements as job_requirements, j.description as job_description
-                 FROM applications a
-                 JOIN users u ON a.user_id = u.user_id
-                 JOIN jobs j ON a.job_id = j.job_id
-                 WHERE a.job_id = ?",
+                    FROM applications a
+                    JOIN users u ON a.user_id = u.user_id
+                    JOIN jobs j ON a.job_id = j.job_id
+                    WHERE a.job_id = ?",
                 [$application['job_id']]
             );
 
@@ -173,14 +174,15 @@ class Applications extends BaseController {
         $applications = db()->select(
             "SELECT a.*, u.full_name as candidate_name, u.email as candidate_email, 
                     u.phone, u.education as candidate_education, u.skills as candidate_skills,
-                    u.experience_years as candidate_experience_years, u.bio as candidate_bio, u.avatar as candidate_avatar, u.cv_file as user_cv_file,
-                    j.title as job_title, j.location, j.department as job_department, j.skills as job_skills,
-                    j.requirements as job_requirements, j.description as job_description
-             FROM applications a
-             JOIN users u ON a.user_id = u.user_id
-             JOIN jobs j ON a.job_id = j.job_id
-             WHERE $where
-             ORDER BY a.applied_at DESC",
+                    u.experience_years as candidate_experience_years, u.bio as candidate_bio, 
+                    u.avatar as candidate_avatar, u.cv_file as user_cv_file,
+                    j.title as job_title, j.location, j.department as job_department, j.skills as 
+                    job_skills, j.requirements as job_requirements, j.description as job_description
+                FROM applications a
+                JOIN users u ON a.user_id = u.user_id
+                JOIN jobs j ON a.job_id = j.job_id
+                WHERE $where
+                ORDER BY a.applied_at DESC",
             $params
         );
 

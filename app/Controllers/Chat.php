@@ -631,18 +631,7 @@ class Chat extends BaseController {
         }
 
         if (hasRole('hrd')) {
-            // HRD hanya boleh chat dengan kandidat yang apply ke job miliknya.
-            // HRD diizinkan membuka banyak sesi chat sekaligus.
-            if ($application_id > 0) {
-                $app = db()->row(
-                    "SELECT a.id, j.created_by FROM applications a
-                     JOIN jobs j ON a.job_id = j.job_id
-                     WHERE a.id = ?",
-                    [$application_id]
-                );
-                if (!$app) return false;
-                if ((int) $app['created_by'] !== (int) $_SESSION['user_id']) return false;
-            }
+            // HRD dapat memulai chat dengan kandidat manapun.
             return true;
         }
 

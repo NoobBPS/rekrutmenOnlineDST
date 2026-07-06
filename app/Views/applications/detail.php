@@ -117,6 +117,15 @@ $decision_saw_display = isset($decision_saw_display) && is_array($decision_saw_d
     </div>
     <?php endif; ?>
 
+    <?php if (!hasRole('hrd') && !empty($application['notes'])): ?>
+    <div class="detail-section">
+        <h3>Catatan dari HRD</h3>
+        <div class="notes-history">
+            <pre><?= h($application['notes']) ?></pre>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <?php if (!empty($application['cv_file'])): ?>
     <div class="detail-section">
         <h3>CV</h3>
