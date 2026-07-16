@@ -183,7 +183,13 @@ if ($currentPage === 'chat-room') {
                         aria-controls="desktop-profile-menu"
                         data-dropdown-toggle
                     >
-                        <?= h($currentUserName) ?>
+                        <div class="nav-avatar" style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; background: var(--primary); color: #fff; flex-shrink: 0; border: 1px solid var(--border);">
+                            <?php if ($currentUserAvatarUrl): ?>
+                            <img src="<?= h($currentUserAvatarUrl) ?>" class="nav-avatar-img" alt="<?= h($currentUserName) ?>" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                            <?php else: ?>
+                            <span class="nav-avatar-fallback" style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 0.85rem; line-height: 1;"><?= h($currentUserInitial) ?></span>
+                            <?php endif; ?>
+                        </div>
                     </button>
                     <div class="dropdown-content" id="desktop-profile-menu" data-dropdown-menu>
                         <a href="<?= BASE_URL ?>profile" class="<?= $activeNavKey === 'profile' ? 'active' : '' ?>">Profil</a>

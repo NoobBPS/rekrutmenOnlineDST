@@ -19,7 +19,3 @@ tingkatkan kerapihan tabel dan perbagus stylingnya
 di tampilan desktop, tampilkan menu visi dan misi perusahaan di footer setiap halaman (kecuali tampilan mobile)..
 
 tambahkan fitur dark mode di tampilan mobile maupun desktop (responsif)
-
-terakhir, tambahkan profile photo lingkaran (avatar) di menu profil (sebagai ganti username), daripada tampilkan usernamenya, lebih baik tampilkan avatar / photo profilenya (circle)
-
-Tambahkan logo dst (perusahaan) ke tag title (yang lambang browser doang di tab).. 
