@@ -47,14 +47,14 @@ function getUserId() {
 }
 
 function setFlash($type, $message) {
-    session()->setFlashdata($type, $message);
+    \Config\Services::session()->setFlashdata($type, $message);
 }
 
 function getFlash() {
     $flash = array();
     foreach (['success', 'error', 'info', 'warning'] as $type) {
-        if (session()->getFlashdata($type)) {
-            $flash[$type] = session()->getFlashdata($type);
+        if (\Config\Services::session()->getFlashdata($type)) {
+            $flash[$type] = \Config\Services::session()->getFlashdata($type);
         }
     }
     return $flash;
@@ -86,7 +86,9 @@ function requireValidCsrf() {
     $token = $_POST['csrf_token'] ?? '';
     if (!verifyCsrfToken($token)) {
         setFlash('error', 'Token keamanan tidak valid. Silakan coba lagi.');
-        redirect('dashboard');
+        $response = redirect()->to(base_url('dashboard'));
+        $response->send();
+        exit();
     }
 }
 

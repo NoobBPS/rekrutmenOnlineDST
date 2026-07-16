@@ -1,1 +1,0 @@
-__ci_last_regenerate|i:1782192932;csrf_token|s:64:"489769e09ecd10a4c382c81b17415ae3cc7ba39932246b747e76368b2e5acd50";_ci_previous_url|s:61:"http://localhost/dst-recruitment/public/index.php/auth/forgot";error|s:69:"Gagal mengirim email. Detail: SMTP credentials not configured in .env";__ci_vars|a:1:{s:5:"error";s:3:"old";}

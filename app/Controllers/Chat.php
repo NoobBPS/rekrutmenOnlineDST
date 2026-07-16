@@ -187,11 +187,11 @@ class Chat extends BaseController {
                 // prevents silently landing in the wrong chatroom.
                 $appRows = db()->select(
                     "SELECT DISTINCT m.application_id
-                     FROM messages m
-                     WHERE ((m.from_user_id = ? AND m.to_user_id = ?)
-                         OR (m.from_user_id = ? AND m.to_user_id = ?))
-                       AND m.application_id IS NOT NULL
-                     ORDER BY m.id DESC",
+                    FROM messages m
+                    WHERE ((m.from_user_id = ? AND m.to_user_id = ?)
+                    OR (m.from_user_id = ? AND m.to_user_id = ?))
+                    AND m.application_id IS NOT NULL
+                    ORDER BY m.id DESC",
                     [(int) $_SESSION['user_id'], $partner_id, $partner_id, (int) $_SESSION['user_id']]
                 );
                 if (count($appRows) === 1) {
@@ -274,10 +274,10 @@ class Chat extends BaseController {
 
         $messages = db()->select(
             "SELECT m.id, m.from_user_id, m.to_user_id, m.content, m.created_at, u.full_name as sender_name
-             FROM messages m
-             JOIN users u ON m.from_user_id = u.user_id
-             WHERE $where
-             ORDER BY m.created_at ASC",
+            FROM messages m
+            JOIN users u ON m.from_user_id = u.user_id
+            WHERE $where
+            ORDER BY m.created_at ASC",
             $params
         );
 
@@ -780,7 +780,7 @@ class Chat extends BaseController {
         // Kartu CV dan pesan terhapus tidak bisa diedit/dihapus
         $canEdit   = !$isCvCard && !$isDeleted && $this->canEditMessageRules($message, $partnerId, $latestOwnMessageId);
         $canDelete = !$isCvCard && !$isDeleted
-                     && (int) ($message['from_user_id'] ?? 0) === (int) ($_SESSION['user_id'] ?? 0);
+                && (int) ($message['from_user_id'] ?? 0) === (int) ($_SESSION['user_id'] ?? 0);
 
         $displayContent = $isDeleted ? 'Pesan telah dihapus' : $rawContent;
 
@@ -862,9 +862,9 @@ class Chat extends BaseController {
         $application = db()->row(
             "SELECT a.id as application_id, a.status, a.cv_file, a.applied_at,
                     j.title as job_title, j.location, j.type, j.salary_min, j.salary_max, j.department
-             FROM applications a
-             JOIN jobs j ON a.job_id = j.job_id
-             WHERE a.id = ?",
+            FROM applications a
+            JOIN jobs j ON a.job_id = j.job_id
+            WHERE a.id = ?",
             [$applicationId]
         );
 

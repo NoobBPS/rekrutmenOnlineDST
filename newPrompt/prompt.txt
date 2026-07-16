@@ -1,13 +1,25 @@
-1. perbaiki error saat ingin migrasi ke ci4
-Warning: require_once(C:\xampp\htdocs\dst-recruitment\app\Config/Constants.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\dst-recruitment\vendor\codeigniter4\framework\system\Boot.php on line 284
-Fatal error: Uncaught Error: Failed opening required 'C:\xampp\htdocs\dst-recruitment\app\Config/Constants.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\dst-recruitment\vendor\codeigniter4\framework\system\Boot.php:284 Stack trace: #0 C:\xampp\htdocs\dst-recruitment\vendor\codeigniter4\framework\system\Boot.php(46): CodeIgniter\Boot::loadConstants() #1 C:\xampp\htdocs\dst-recruitment\index.php(22): CodeIgniter\Boot::bootWeb(Object(Config\Paths)) #2 {main} thrown in C:\xampp\htdocs\dst-recruitment\vendor\codeigniter4\framework\system\Boot.php on line 284
+1.365.685.037
+1.556.279.871
+1.506.003.300
+1.457.878.159
+1.962.677.291
+1.684.920.171
+2.660.040.077
+2.165.498.081
+2.017.451.064
 
-2. Migrasi ke codeigniter 4
-provider jagoanHosting pernah menangani kasus seperti ini saat saya tanya. Berikut jawabannya
-Sehingga untuk kendala yang saat ini masih muncul terindikasi berasal dari sisi script maupun konfigurasi aplikasi CodeIgniter yang digunakan, seperti konfigurasi routing, struktur project CI, pemanggilan controller/function, maupun script yang dijalankan ya pak. Karena kendala sudah masuk ke ranah coding/content website, maka perbaikannya perlu dilakukan dari sisi script aplikasi tersebut ya pak, silahkan untuk direview kembali dari sisi script anda ya pak.
-Tolong cek struktur projek CInya dan lain-lain seperti ketentuan jawaban ini.. CEK SELURUH FILE DAN FOLDER SERTA HUBUNGANNYA DENGAN masing file / folder satu sama lain
+pertama peneliti mengumpulkan bahan-bahan kebutuhan penelitian, lalu merancang ui dan ux berdasarkan bahan-bahan tersebut, kemudian convert ui / ux menjadi sebuah kode PHP, javascript, selanjutnya dilakukan verifikasi untuk memastikan bahwa sistem ini berjalan dengan baik, dan terakhir dipublish dan dilakukan perawatan sistem secara berkala (maintenance)
 
-3. satu lagi tombol ganti password kurang ke atas.. dan tombol batal di halaman detail melamar pekerjaan kurang ke bawah (supaya ada jarak dengan tombol kirim lamaran)
+tambahkan fitur notifikasi status seleksi lamaran pekerjaan user dengan mengirimkannya ke email masing-masing akun role user.. tapi tolong jangan mengorek fungsi lain..
 
-4. saya lupa password, lalu saya menggunakan fitur lupa password, yang mana cara kerjanya sistem mengirimkan link reset password ke email di googlemail si akun.. https://karirdigdaya.web.id/auth/changePassword (ini link resetnya) nah kemudian saya klik link tersebut.. lalu muncul output seperti di gambar.. tolong perbaiki
-agar halaman changePassword tersebut tidak error dan bisa mengubah password..
+untuk akun yang tidak upload foto profile, tolong set profile photo ke avatar setengah badan polos (warna abu-abu) kayak di aplikasi WhatsApp
+
+tingkatkan kerapihan tabel dan perbagus stylingnya
+
+di tampilan desktop, tampilkan menu visi dan misi perusahaan di footer setiap halaman (kecuali tampilan mobile)..
+
+tambahkan fitur dark mode di tampilan mobile maupun desktop (responsif)
+
+terakhir, tambahkan profile photo lingkaran (avatar) di menu profil (sebagai ganti username), daripada tampilkan usernamenya, lebih baik tampilkan avatar / photo profilenya (circle)
+
+Tambahkan logo dst (perusahaan) ke tag title (yang lambang browser doang di tab).. 
